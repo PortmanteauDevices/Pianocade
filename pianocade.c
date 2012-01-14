@@ -807,6 +807,7 @@ void load_settings(uint8_t bank){
   arp_mode = pgm_read_byte(&(banked_arp_mode[bank])) % ARPMODES;
   arp_speed = pgm_read_byte(&(banked_arp_speed[bank]));
   retrigger_flag = pgm_read_byte(&(banked_retrigger_flag[bank]));
+  if(notes_pressed || held_flag) new_note();
 }
 
 void new_note(){
