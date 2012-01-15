@@ -1,6 +1,15 @@
 #ifndef PIANOCADE_H
 #define PIANOCADE_H
 
+		#include "Descriptors.h"
+
+		#include <LUFA/Version.h>
+		#include <LUFA/Drivers/USB/USB.h>
+		#include <avr/pgmspace.h>
+        #include <avr/interrupt.h>
+        #include <stdlib.h>
+        #include <string.h>
+		
     /* Registers */
     #define PORT_DAC PORTF
     #define DDR_DAC DDRF
@@ -64,7 +73,7 @@
     */
     void noteOn(unsigned char note);
     void noteOff(unsigned char note);
-    void MIDI_TX(unsigned char MESSAGE, unsigned char PITCH, unsigned char VELOCITY) ;
+    void MIDI_TX(unsigned char, unsigned char, unsigned char) ;
 
     /*
     * TABLE METHODS
@@ -89,5 +98,12 @@
 
     void spi_init(void);
     uint8_t spi_transfer(uint8_t _data);
+    
+    void SetupHardware(void);
+    
+    void EVENT_USB_Device_Connect(void);
+	void EVENT_USB_Device_Disconnect(void);
+	void EVENT_USB_Device_ConfigurationChanged(void);
+	void EVENT_USB_Device_ControlRequest(void);
 
 #endif /* end of include guard: PIANOCADE_H */

@@ -116,7 +116,7 @@ OBJDIR = .
 
 
 # Path to the LUFA library
-LUFA_PATH = ../../../../Downloads/LUFA-111009
+LUFA_PATH = ./
 
 
 # LUFA library compile-time options and predefined tokens
@@ -132,10 +132,10 @@ include $(LUFA_PATH)/LUFA/makefile
 
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = $(TARGET).c
-#	  Descriptors.c                                               \
-#	  $(LUFA_SRC_USB)                                             \
-#	  $(LUFA_SRC_USBCLASS)
+SRC = $(TARGET).c                                                 \
+	  Descriptors.c                                               \
+	  $(LUFA_SRC_USB)                                             \
+	  $(LUFA_SRC_USBCLASS)
 
 
 # List C++ source files here. (C dependencies are automatically generated.)

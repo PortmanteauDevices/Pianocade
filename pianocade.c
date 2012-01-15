@@ -1,7 +1,3 @@
-#include <avr/pgmspace.h>
-#include <avr/interrupt.h>
-#include <stdlib.h>
-#include <string.h>
 #include "pianocade.h"
 
 const uint8_t prescaler[TOTAL_NOTES] PROGMEM = {0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010};
@@ -375,8 +371,26 @@ void (*table_command[16])(uint8_t argument) = {
   &shiftnote // A
 };
 
+USB_ClassInfo_MIDI_Device_t Keyboard_MIDI_Interface =
+	{
+		.Config =
+			{
+				.StreamingInterfaceNumber = 1,
+
+				.DataINEndpointNumber      = MIDI_STREAM_IN_EPNUM,
+				.DataINEndpointSize        = MIDI_STREAM_EPSIZE,
+				.DataINEndpointDoubleBank  = false,
+
+				.DataOUTEndpointNumber     = MIDI_STREAM_OUT_EPNUM,
+				.DataOUTEndpointSize       = MIDI_STREAM_EPSIZE,
+				.DataOUTEndpointDoubleBank = false,
+			},
+	};
+
 
 int main(void) {
+    SetupHardware();
+	
   (CLKPR = 0x80, CLKPR = (0)); // Set clock to 16MHz (for TEENSY BOARD)
     
   DDR_DAC = 0b1111;
@@ -406,6 +420,8 @@ int main(void) {
   sei();
 
   for(;;) {
+      	MIDI_Device_USBTask(&Keyboard_MIDI_Interface);
+		USB_USBTask();
     // BEGIN ANALOGUE SETTINGS
     // This section is for future expansion, allowing analogue adjustment of arp_speed
     OCR2A = arp_speed + 10;
@@ -574,7 +590,7 @@ int main(void) {
 // Arpeggiator timer
 ISR(TIMER2_COMPA_vect){
     if(arp_count++ > 128){
-      (*arpeggio[arp_mode])();
+       (*arpeggio[arp_mode])();
     }
 }
 
@@ -720,10 +736,28 @@ void noteOff(unsigned char note){
   MIDI_TX(128,note,127);
 }
 
-void MIDI_TX(unsigned char MESSAGE, unsigned char PITCH, unsigned char VELOCITY) {
-  /*Serial.print(MESSAGE);
-  Serial.print(PITCH);
+void MIDI_TX(uint8_t MIDICommand, uint8_t MIDIPitch, uint8_t VELOCITY) {
+  /*Serial.print(MIDICommand);
+  Serial.print(MIDIPitch);
   Serial.print(VELOCITY);*/
+  
+      uint8_t Channel = 0;
+
+  	{
+  		MIDI_EventPacket_t MIDIEvent = (MIDI_EventPacket_t)
+  			{
+  				.CableNumber = 0,
+  				.Command     = (MIDICommand >> 4),
+
+  				.Data1       = MIDICommand | Channel,
+  				.Data2       = MIDIPitch,
+  				.Data3       = 64,
+  			};
+
+  		MIDI_Device_SendEventPacket(&Keyboard_MIDI_Interface, &MIDIEvent);
+  		MIDI_Device_Flush(&Keyboard_MIDI_Interface);
+  	}
+  
 }
 // END MIDI METHODS
 
@@ -832,4 +866,41 @@ uint8_t spi_transfer(uint8_t _data) {
   while (!(SPSR & _BV(SPIF)))
     ;
   return SPDR;
+}
+
+void SetupHardware(void)
+{
+	/* Disable watchdog if enabled by bootloader/fuses */
+	MCUSR &= ~(1 << WDRF);
+	// wdt_disable();
+
+	/* Disable clock division */
+	//clock_prescale_set(clock_div_1);
+
+	/* Hardware Initialization */
+	USB_Init();
+}
+
+/** Event handler for the library USB Connection event. */
+void EVENT_USB_Device_Connect(void)
+{
+}
+
+/** Event handler for the library USB Disconnection event. */
+void EVENT_USB_Device_Disconnect(void)
+{
+}
+
+/** Event handler for the library USB Configuration Changed event. */
+void EVENT_USB_Device_ConfigurationChanged(void)
+{
+	bool ConfigSuccess = true;
+
+	ConfigSuccess &= MIDI_Device_ConfigureEndpoints(&Keyboard_MIDI_Interface);
+}
+
+/** Event handler for the library USB Control Request reception event. */
+void EVENT_USB_Device_ControlRequest(void)
+{
+	MIDI_Device_ProcessControlRequest(&Keyboard_MIDI_Interface);
 }
