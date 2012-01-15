@@ -387,6 +387,10 @@ USB_ClassInfo_MIDI_Device_t Keyboard_MIDI_Interface =
 			},
 	};
 
+    uint16_t midi_notes[10] = {0,0,0,0,0,0,0,0,0,0};
+    uint8_t midi_changed = 0;
+    uint8_t midi_new = 0;
+    uint8_t midi_hasnotes = 0;
 
 int main(void) {
     SetupHardware();
@@ -427,12 +431,22 @@ int main(void) {
 		while (MIDI_Device_ReceiveEventPacket(&Keyboard_MIDI_Interface, &ReceivedMIDIEvent))
 		{
 			if ((ReceivedMIDIEvent.Command == (0x90 >> 4)) && (ReceivedMIDIEvent.Data3 > 0)){
-			  held_notes[ReceivedMIDIEvent.Data2/12] |= (1 << (ReceivedMIDIEvent.Data2 % 12));
-              held_changed = 1;
+			  midi_notes[ReceivedMIDIEvent.Data2/12] |= (1 << (ReceivedMIDIEvent.Data2 % 12));
+              midi_changed = 1;
+              midi_new = !midi_hasnotes;
+              midi_hasnotes = 1;
 		  }
-			else if (ReceivedMIDIEvent.Command == (0x80 >> 4) || (ReceivedMIDIEvent.Data3 == 0)){
-  			  held_notes[ReceivedMIDIEvent.Data2/12] &= ~(1 << (ReceivedMIDIEvent.Data2 % 12));
-              held_changed = 1;
+			else if (ReceivedMIDIEvent.Command == (0x80 >> 4) || ((ReceivedMIDIEvent.Command == (0x90 >> 4)) && (ReceivedMIDIEvent.Data3 == 0))){
+  			  midi_notes[ReceivedMIDIEvent.Data2/12] &= ~(1 << (ReceivedMIDIEvent.Data2 % 12));
+              midi_changed = 1;
+              midi_hasnotes = 0;
+              midi_new = 0;
+              for(int octave_count = 0; octave_count < 10; ++octave_count){
+                  if(midi_notes[octave_count]){
+                      midi_hasnotes = 1;
+                      break;  
+                  } 
+              }
 			}
 		}
 		
@@ -533,7 +547,7 @@ int main(void) {
     // END PROCESS CONTROL SEQUENCES
 
     // BEGIN PROCESS NOTES
-    if( ( (last_notes_pressed != notes_pressed) && (debounce_notes_count > NOTES_DEBOUNCE)) || octave_flag || held_changed){
+    if( ( (last_notes_pressed != notes_pressed) && (debounce_notes_count > NOTES_DEBOUNCE)) || octave_flag || held_changed || midi_changed){
       chord_length = 0;
     
       if(held_flag && held_state){ // if the held button is pressed, add the currently pressed notes to the hold
@@ -541,10 +555,15 @@ int main(void) {
         held_notes[octave + 1] |= (uint16_t)(notes_pressed >> 12);
       }
       memcpy(all_notes, held_notes, 20);
+      if(midi_hasnotes){
+          for(int i = 0; i < 10; ++i){
+              all_notes[i] |= midi_notes[i];
+          }
+      }
       all_notes[octave] |= (uint16_t)(notes_pressed & 0b111111111111);
       all_notes[octave + 1] |= (uint16_t)(notes_pressed >> 12);
 
-      if(notes_pressed || held_flag){ // Checks if any notes are pressed
+      if(notes_pressed || held_flag || midi_hasnotes){ // Checks if any notes are pressed
         for(int octave_count = 0; octave_count < 10; ++octave_count){
           if(all_notes[octave_count]){
             for(int key_count = 0; key_count < 12; ++key_count){
@@ -577,7 +596,7 @@ int main(void) {
           }
           arp_count = 0;
         }
-        if(!last_notes_pressed && !held_flag){ // If no notes were pressed before, begin the attack phase
+        if((!last_notes_pressed || midi_new) && !held_flag){ // If no notes were pressed before, begin the attack phase
           shift = 0;
           TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]);
           new_note();
@@ -595,6 +614,7 @@ int main(void) {
       last_notes_pressed = notes_pressed;
       octave_flag = 0;
       held_changed = 0;
+      midi_changed = 0;
     }
     // END PROCESS NOTES
   
@@ -855,7 +875,7 @@ void load_settings(uint8_t bank){
   arp_mode = pgm_read_byte(&(banked_arp_mode[bank])) % ARPMODES;
   arp_speed = pgm_read_byte(&(banked_arp_speed[bank]));
   retrigger_flag = pgm_read_byte(&(banked_retrigger_flag[bank]));
-  if(notes_pressed || held_flag) new_note();
+  if(notes_pressed || held_flag || midi_hasnotes) new_note();
 }
 
 void new_note(){
