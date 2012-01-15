@@ -422,6 +422,20 @@ int main(void) {
   for(;;) {
       	MIDI_Device_USBTask(&Keyboard_MIDI_Interface);
 		USB_USBTask();
+		
+		MIDI_EventPacket_t ReceivedMIDIEvent;
+		while (MIDI_Device_ReceiveEventPacket(&Keyboard_MIDI_Interface, &ReceivedMIDIEvent))
+		{
+			if ((ReceivedMIDIEvent.Command == (0x90 >> 4)) && (ReceivedMIDIEvent.Data3 > 0)){
+			  held_notes[ReceivedMIDIEvent.Data2/12] |= (1 << (ReceivedMIDIEvent.Data2 % 12));
+              held_changed = 1;
+		  }
+			else if (ReceivedMIDIEvent.Command == (0x80 >> 4) || (ReceivedMIDIEvent.Data3 == 0)){
+  			  held_notes[ReceivedMIDIEvent.Data2/12] &= ~(1 << (ReceivedMIDIEvent.Data2 % 12));
+              held_changed = 1;
+			}
+		}
+		
     // BEGIN ANALOGUE SETTINGS
     // This section is for future expansion, allowing analogue adjustment of arp_speed
     OCR2A = arp_speed + 10;
