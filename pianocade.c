@@ -736,7 +736,7 @@ void noteOff(unsigned char note){
   MIDI_TX(128,note,127);
 }
 
-void MIDI_TX(uint8_t MIDICommand, uint8_t MIDIPitch, uint8_t VELOCITY) {
+void MIDI_TX(uint8_t MIDICommand, uint8_t MIDIPitch, uint8_t velocity) {
   /*Serial.print(MIDICommand);
   Serial.print(MIDIPitch);
   Serial.print(VELOCITY);*/
@@ -751,7 +751,7 @@ void MIDI_TX(uint8_t MIDICommand, uint8_t MIDIPitch, uint8_t VELOCITY) {
 
   				.Data1       = MIDICommand | Channel,
   				.Data2       = MIDIPitch,
-  				.Data3       = 64,
+  				.Data3       = velocity,
   			};
 
   		MIDI_Device_SendEventPacket(&Keyboard_MIDI_Interface, &MIDIEvent);
