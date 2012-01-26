@@ -716,6 +716,7 @@ void autobend_return(){
 // BEGIN ENVELOPE METHODS
 void mute(){
   volume = 0;
+  TCCR1B = 0;
   muteflag=1;
 }
 // END ENVELOPE METHODS
