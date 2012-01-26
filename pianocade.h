@@ -21,6 +21,8 @@
     #define DD_SCK  PB1
     #define DD_SS   PB0
 
+    #define MIDICHANNEL 0
+
     /* Macros */
     #define HINIBBLE(b) (((b) >> 4) & 0x0F)
     #define LONIBBLE(b) ((b) & 0x0F)

@@ -428,27 +428,28 @@ int main(void) {
 		USB_USBTask();
 		
 		MIDI_EventPacket_t ReceivedMIDIEvent;
-		while (MIDI_Device_ReceiveEventPacket(&Keyboard_MIDI_Interface, &ReceivedMIDIEvent))
-		{
-			if ((ReceivedMIDIEvent.Command == (0x90 >> 4)) && (ReceivedMIDIEvent.Data3 > 0)){
-			  midi_notes[ReceivedMIDIEvent.Data2/12] |= (1 << (ReceivedMIDIEvent.Data2 % 12));
-              midi_changed = 1;
-              midi_new = !midi_hasnotes;
-              midi_hasnotes = 1;
-		  }
-			else if (ReceivedMIDIEvent.Command == (0x80 >> 4) || ((ReceivedMIDIEvent.Command == (0x90 >> 4)) && (ReceivedMIDIEvent.Data3 == 0))){
-  			  midi_notes[ReceivedMIDIEvent.Data2/12] &= ~(1 << (ReceivedMIDIEvent.Data2 % 12));
-              midi_changed = 1;
-              midi_hasnotes = 0;
-              midi_new = 0;
-              for(int octave_count = 0; octave_count < 10; ++octave_count){
-                  if(midi_notes[octave_count]){
-                      midi_hasnotes = 1;
-                      break;  
-                  } 
-              }
-			}
-		}
+        while (MIDI_Device_ReceiveEventPacket(&Keyboard_MIDI_Interface, &ReceivedMIDIEvent)){
+            if(ReceivedMIDIEvent.CableNumber == 0 && (ReceivedMIDIEvent.Data1 & 0xF) == MIDICHANNEL){
+                if ((ReceivedMIDIEvent.Command == (0x90 >> 4)) && (ReceivedMIDIEvent.Data3 > 0)){
+                    midi_notes[ReceivedMIDIEvent.Data2/12] |= (1 << (ReceivedMIDIEvent.Data2 % 12));
+                    midi_changed = 1;
+                    midi_new = !midi_hasnotes;
+                    midi_hasnotes = 1;
+                }
+                else if (ReceivedMIDIEvent.Command == (0x80 >> 4) || ((ReceivedMIDIEvent.Command == (0x90 >> 4)) && (ReceivedMIDIEvent.Data3 == 0))){
+                    midi_notes[ReceivedMIDIEvent.Data2/12] &= ~(1 << (ReceivedMIDIEvent.Data2 % 12));
+                    midi_changed = 1;
+                    midi_hasnotes = 0;
+                    midi_new = 0;
+                    for(int octave_count = 0; octave_count < 10; ++octave_count){
+                        if(midi_notes[octave_count]){
+                            midi_hasnotes = 1;
+                            break;  
+                        } 
+                    }
+                }
+            }
+        }
 		
     // BEGIN ANALOGUE SETTINGS
     // This section is for future expansion, allowing analogue adjustment of arp_speed
