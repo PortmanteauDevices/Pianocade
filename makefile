@@ -60,7 +60,7 @@
 
 
 # MCU name
-MCU = at90usb1287
+MCU = at90usb646
 
 
 # Target architecture (see library "Board Types" documentation).
@@ -70,7 +70,7 @@ ARCH = AVR8
 # Target board (see library "Board Types" documentation, NONE for projects not requiring
 # LUFA board drivers). If USER is selected, put custom board drivers in a directory called
 # "Board" inside the application directory.
-BOARD = TEENSY
+BOARD = NONE
 
 
 # Processor frequency.

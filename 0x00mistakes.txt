@@ -1,0 +1,7 @@
+- No ground connections
+- No mounting holes
+- More space between jacks, especially MIDI, power switch
+- PORT E and PORT F labels reversed
+- SMD resistors and cap labels illegible
+- Switch to through hole 358 (for power reasons)
+- No SS marker on ICSP header

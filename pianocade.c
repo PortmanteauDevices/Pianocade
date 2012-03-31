@@ -75,6 +75,8 @@ uint8_t jump_on_release;
 uint8_t jump_flag;
 uint8_t retrigger_flag;
 
+uint8_t pinreadbuffer;
+
 const uint8_t PROGMEM banked_start_volume[15] = {0xF, 0xF, 0x0, 0xF, 0xB, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0x3};
 const uint8_t PROGMEM banked_arp_mode[15] = {0, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
 const uint8_t PROGMEM banked_arp_speed[15] = {12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 120, 120, 120, 120, 120};
@@ -397,10 +399,15 @@ int main(void) {
 	
   (CLKPR = 0x80, CLKPR = (0)); // Set clock to 16MHz (for TEENSY BOARD)
     
+  // Set DDR pins to output
   DDR_DAC = 0b1111;
   
-  PORTD |= 0b10000000; //Enable internal pull on Port D, pin 7
-  
+  // Internal pull-ups
+  PORT_CONTROL |= 0b11111111; // controls
+  PORT_NOTES0 |= 0b11111111; // Notes C0-G0
+  PORT_NOTES1 |= 0b11111111; // Notes G#0-D#1
+  PORT_NOTES2 |= 0b11111111; // Notes E1-B1
+    
   TCCR2A = 0b00000010; //CTC mode, all pins detached
   TCCR2B = 0; // Stopped; when started, will set to clk/256
   OCR2A = 255; // Overflow level
@@ -416,10 +423,7 @@ int main(void) {
   TCCR0B = 0b101; // clk/1024
   OCR0A = 10; // Volume timer
   TIMSK0 = 0b10;
-  
-  spi_init();
-  //Serial.begin(31250);
-  
+    
   load_settings(0);
   sei();
 
@@ -428,7 +432,7 @@ int main(void) {
 		USB_USBTask();
 		
 		MIDI_EventPacket_t ReceivedMIDIEvent;
-        while (MIDI_Device_ReceiveEventPacket(&Keyboard_MIDI_Interface, &ReceivedMIDIEvent)){
+   /*     while (MIDI_Device_ReceiveEventPacket(&Keyboard_MIDI_Interface, &ReceivedMIDIEvent)){
             if(ReceivedMIDIEvent.CableNumber == 0 && (ReceivedMIDIEvent.Data1 & 0xF) == MIDICHANNEL){
                 if ((ReceivedMIDIEvent.Command == (0x90 >> 4)) && (ReceivedMIDIEvent.Data3 > 0)){
                     midi_notes[ReceivedMIDIEvent.Data2/12] |= (1 << (ReceivedMIDIEvent.Data2 % 12));
@@ -449,7 +453,7 @@ int main(void) {
                     }
                 }
             }
-        }
+        }*/
 		
     // BEGIN ANALOGUE SETTINGS
     // This section is for future expansion, allowing analogue adjustment of arp_speed
@@ -457,14 +461,19 @@ int main(void) {
     // END ANALOGUE SETTINGS
   
  
-    // BEGIN READ ALL SHIFT REGISTERS
-    PORT_SPI |= _BV(DD_SS);
-    control = spi_transfer(0);
-    notes_pressed = spi_transfer(0);
-    notes_pressed |= ((uint32_t)spi_transfer(0) << 8);
-    notes_pressed |= ((uint32_t)spi_transfer(0) << 16);
-    PORT_SPI &= ~_BV(DD_SS);
-    // END READ ALL SHIFT REGISTERS
+    // BEGIN READ ALL NOTES AND CONTROLS
+    
+    control = (~PIN_CONTROL);
+    
+    pinreadbuffer = (~PIN_NOTES0);
+    notes_pressed = pinreadbuffer;
+    
+    pinreadbuffer = (~PIN_NOTES1);
+    notes_pressed |= ((uint32_t)pinreadbuffer << 8);
+    
+    pinreadbuffer = (~PIN_NOTES2);
+    notes_pressed |= ((uint32_t)pinreadbuffer << 16);
+    // END READ ALL NOTES AND CONTROLS
   
     //BEGIN DEBOUNCE
     if(notes_pressed == debounce_notes){
@@ -481,7 +490,7 @@ int main(void) {
       debounce_control = control;
     }
   
-    pinread = PIND;
+/*    pinread = PIND;
     if( debounce_held == !((pinread >> 7) & 1)){
       if(++debounce_held_count > HELD_DEBOUNCE){
         held_state = debounce_held;
@@ -489,7 +498,7 @@ int main(void) {
     } else {
       debounce_held_count = 0;
       debounce_held = !((pinread >> 7) & 1);
-    }
+    }*/
     // END DEBOUNCE
   
     // BEGIN PROCESS HOLD BUTTON
@@ -888,20 +897,6 @@ void new_note(){
   memset(table_localdata,0,16);
   table_timer = TABLE_SPEED;
   muteflag = 0;
-}
-
-void spi_init(void){
-    /* Set MOSI, SCK, and SS output, all others input */ 
-    DDR_SPI = (1<<DD_MOSI)|(1<<DD_SCK)|(1<<DD_SS); 
-    /* Enable SPI, Master mode, SPI Mode 2 (idle high, sample on leading edge) */ 
-    SPCR = (1<<SPE)|(1<<MSTR)|(1<<CPOL);
-}
-
-uint8_t spi_transfer(uint8_t _data) {
-  SPDR = _data;
-  while (!(SPSR & _BV(SPIF)))
-    ;
-  return SPDR;
 }
 
 void SetupHardware(void)

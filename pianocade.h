@@ -11,15 +11,24 @@
         #include <string.h>
 		
     /* Registers */
-    #define PORT_DAC PORTF
-    #define DDR_DAC DDRF
+    #define PORT_DAC PORTA
+    #define DDR_DAC DDRA
+
+    #define PORT_NOTES0 PORTE
+    #define DDR_NOTES0 DDRE
+    #define PIN_NOTES0 PINE
+
+    #define PORT_NOTES1 PORTC
+    #define DDR_NOTES1 DDRC
+    #define PIN_NOTES1 PINC
     
-    #define PORT_SPI PORTB
-    #define DDR_SPI DDRB
-    #define DD_MISO PB3
-    #define DD_MOSI PB2
-    #define DD_SCK  PB1
-    #define DD_SS   PB0
+    #define PORT_NOTES2 PORTB
+    #define DDR_NOTES2 DDRB
+    #define PIN_NOTES2 PINB
+    
+    #define PORT_CONTROL PORTF
+    #define DDR_CONTROL DDRF
+    #define PIN_CONTROL PINF
 
     #define MIDICHANNEL 0
 
@@ -97,9 +106,6 @@
     */
     void load_settings(uint8_t bank);
     void new_note(void);
-
-    void spi_init(void);
-    uint8_t spi_transfer(uint8_t _data);
     
     void SetupHardware(void);
     
