@@ -26,6 +26,7 @@
     #define DDR_NOTES2 DDRB
     #define PIN_NOTES2 PINB
     
+    // NOTE: to use PORTF, JTAF interface must be disabled
     #define PORT_CONTROL PORTF
     #define DDR_CONTROL DDRF
     #define PIN_CONTROL PINF
