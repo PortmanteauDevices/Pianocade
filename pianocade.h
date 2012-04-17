@@ -2,6 +2,7 @@
 #define PIANOCADE_H
 
 		#include "Descriptors.h"
+		#include "Serial.h"
 
 		#include <LUFA/Version.h>
 		#include <LUFA/Drivers/USB/USB.h>
@@ -32,7 +33,7 @@
     #define PIN_CONTROL PINF
 
     #define MIDICHANNEL 0
-
+    
     /* Macros */
     #define HINIBBLE(b) (((b) >> 4) & 0x0F)
     #define LONIBBLE(b) ((b) & 0x0F)
@@ -49,10 +50,6 @@
     #define HELD_DEBOUNCE DEBOUNCE
     #define ARPMODES 3
     #define TABLE_SPEED 24
-    
-    #define USART_BAUDRATE 31250
-    #define BAUD_PRESCALE ((( F_CPU / ( USART_BAUDRATE * 16UL ))) - 1)
-
 
     /* Function prototypes */
 
@@ -82,12 +79,6 @@
     void ascending(void);
     void descending(void);
     void random_arp(void);
-
-    /*
-    * SERIAL METHODS
-    */
-    void SerialBegin(void);
-    void SerialPrint(uint8_t);
 
     /*
     * MIDI METHODS
