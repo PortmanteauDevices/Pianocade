@@ -653,8 +653,7 @@ ISR(TIMER1_COMPB_vect){
 // END NOTE GENERATION
 
 // Utility clock: table, pitch autobend
-ISR(TIMER0_COMPA_vect){
-  sei();
+ISR(TIMER0_COMPA_vect, ISR_NOBLOCK){
   autobend();
   if(++table_timer > TABLE_SPEED && table_pos < 32){
     table_timer = 0;
