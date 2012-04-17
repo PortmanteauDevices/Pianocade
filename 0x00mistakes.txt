@@ -4,4 +4,20 @@
 - PORT E and PORT F labels reversed
 - SMD resistors and cap labels illegible
 - Switch to through hole 358 (for power reasons)
-- No SS marker on ICSP header
+- No silkscreen marker on ICSP header
+- REVERSE CURRENT PROTECTION ON REGULATOR (Add diode)
+- Wider traces everywhere
+- Resistors on board for hold button LEDs
+- Add labels to DAC pins
+
+- ?Add external reset button? 
+- ?Flip middle 8 notes so they're in linear order?
+- ?Get rid of power switch?
+- ?Add automatic power selection between power jack and USB bus?
+- ?Add diodes to each of the 5V sources, so they can both be connected simultaneously?
+- ?Add resettable fuse to USB power line?
+
+	Potential power setup: DC line/battery (POWERIN) through reverse-current diode (VIN) 
+through regulator (+5V). VIN goes to the gate of a MOSFET, so that if it's higher than VUSB, 
+current is BLOCKED from VUSB to +5V. If it's LOWER than VUSB (tied to GND through a pull-down),
+then current CAN flow from VUSB. Need a P-Channel FET, I believe.
