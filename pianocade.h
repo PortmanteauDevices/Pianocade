@@ -49,6 +49,9 @@
     #define HELD_DEBOUNCE DEBOUNCE
     #define ARPMODES 3
     #define TABLE_SPEED 24
+    
+    #define USART_BAUDRATE 31250
+    #define BAUD_PRESCALE ((( F_CPU / ( USART_BAUDRATE * 16UL ))) - 1)
 
 
     /* Function prototypes */
@@ -79,6 +82,12 @@
     void ascending(void);
     void descending(void);
     void random_arp(void);
+
+    /*
+    * SERIAL METHODS
+    */
+    void SerialBegin(void);
+    void SerialPrint(uint8_t);
 
     /*
     * MIDI METHODS

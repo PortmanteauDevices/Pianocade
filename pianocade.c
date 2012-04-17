@@ -424,6 +424,8 @@ int main(void) {
   OCR0A = 10; // Volume timer
   TIMSK0 = 0b10;
     
+  SerialBegin();    
+    
   load_settings(0);
   sei();
 
@@ -432,7 +434,7 @@ int main(void) {
 		USB_USBTask();
 		
 		MIDI_EventPacket_t ReceivedMIDIEvent;
-   /*     while (MIDI_Device_ReceiveEventPacket(&Keyboard_MIDI_Interface, &ReceivedMIDIEvent)){
+       while (MIDI_Device_ReceiveEventPacket(&Keyboard_MIDI_Interface, &ReceivedMIDIEvent)){
             if(ReceivedMIDIEvent.CableNumber == 0 && (ReceivedMIDIEvent.Data1 & 0xF) == MIDICHANNEL){
                 if ((ReceivedMIDIEvent.Command == (0x90 >> 4)) && (ReceivedMIDIEvent.Data3 > 0)){
                     midi_notes[ReceivedMIDIEvent.Data2/12] |= (1 << (ReceivedMIDIEvent.Data2 % 12));
@@ -453,7 +455,7 @@ int main(void) {
                     }
                 }
             }
-        }*/
+        }
 		
     // BEGIN ANALOGUE SETTINGS
     // This section is for future expansion, allowing analogue adjustment of arp_speed
@@ -530,7 +532,7 @@ int main(void) {
         }
       }
       if(control & 0b01000000) {
-        if(octave < 9) { // SET TO 8 FOR 24 KEYS
+        if(octave < 8) { // SET TO 8 FOR 24 KEYS, 9 FOR 12
           octave++;
           octave_flag = 1;
         }
@@ -782,9 +784,9 @@ void noteOff(unsigned char note){
 }
 
 void MIDI_TX(uint8_t MIDICommand, uint8_t MIDIPitch, uint8_t velocity) {
-  /*Serial.print(MIDICommand);
-  Serial.print(MIDIPitch);
-  Serial.print(VELOCITY);*/
+  SerialPrint(MIDICommand);
+  SerialPrint(MIDIPitch);
+  SerialPrint(velocity);
   
       uint8_t Channel = 0;
 
@@ -934,4 +936,20 @@ void EVENT_USB_Device_ConfigurationChanged(void)
 void EVENT_USB_Device_ControlRequest(void)
 {
 	MIDI_Device_ProcessControlRequest(&Keyboard_MIDI_Interface);
+}
+
+void SerialBegin(void){
+    /* Set baud rate */ 
+    UBRR1H = ( BAUD_PRESCALE >> 8); 
+    UBRR1L = BAUD_PRESCALE;
+    
+    /* Enable receiver and transmitter */ 
+    UCSR1B = (1<<RXEN1)|(1<<TXEN1); 
+    /* Set frame format: 8 data, 1 stop bit */ 
+    UCSR1C = (1<<UCSZ10)|(1<<UCSZ11);
+}
+
+void SerialPrint(uint8_t ByteToSend){
+    while (( UCSR1A & (1 << UDRE1 )) == 0) {}; // Do nothing until UDR is ready for more data to be written to it
+    UDR1 = ByteToSend ; // Send out the byte value in the variable " ByteToSend "
 }
