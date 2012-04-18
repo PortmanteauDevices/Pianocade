@@ -7,5 +7,9 @@
 
     void SerialBegin(void);
     void SerialPrint(uint8_t);
+    int SerialAvailable(void);
+    unsigned char SerialPeek(void);
+    unsigned char SerialRead(void);
+    
 
 #endif

@@ -9,6 +9,7 @@
 - Wider traces everywhere
 - Resistors on board for hold button LEDs
 - Add labels to DAC pins
+- PC900 pins 1 and 2 appear to be swapped; double check against data sheet and midi.org specs
 
 - ?Add external reset button? 
 - ?Flip middle 8 notes so they're in linear order?

@@ -456,6 +456,34 @@ int main(void) {
                 }
             }
         }
+                
+        if(SerialAvailable()){
+            unsigned char midiCommand = SerialRead();
+            if(midiCommand == (0x90 & MIDICHANNEL)){
+                while(!SerialAvailable()) {};
+                unsigned char midiNote = SerialRead();
+                while(!SerialAvailable()) {};
+                unsigned char velocity = SerialRead();
+                
+                if(velocity){
+                    midi_notes[midiNote/12] |= (1 << (midiNote % 12));
+                    midi_changed = 1;
+                    midi_new = !midi_hasnotes;
+                    midi_hasnotes = 1;
+                } else {
+                    midi_notes[midiNote/12] &= ~(1 << (midiNote % 12));
+                    midi_changed = 1;
+                    midi_hasnotes = 0;
+                    midi_new = 0;
+                    for(int octave_count = 0; octave_count < 10; ++octave_count){
+                        if(midi_notes[octave_count]){
+                            midi_hasnotes = 1;
+                            break;  
+                        } 
+                    }
+                }
+            }
+        }
 		
     // BEGIN ANALOGUE SETTINGS
     // This section is for future expansion, allowing analogue adjustment of arp_speed
