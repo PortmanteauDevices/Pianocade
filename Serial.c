@@ -2,12 +2,13 @@
 
 #define RX_BUFFER_SIZE 128
 
-unsigned char buffer[RX_BUFFER_SIZE] = {0};
-int writeIndex = 0;
-int readIndex = 0;
+volatile unsigned char buffer[RX_BUFFER_SIZE] = {0};
+volatile int writeIndex = 0;
+volatile int readIndex = 0;
 
 ISR(USART1_RX_vect){
-    unsigned char c = UDR1;
+    unsigned char c;
+    c = UDR1;
     int i = (writeIndex + 1) % RX_BUFFER_SIZE;
 
     // if we should be storing the received character into the location
@@ -25,10 +26,13 @@ void SerialBegin(void){
     UBRR1H = ( BAUD_PRESCALE >> 8); 
     UBRR1L = BAUD_PRESCALE;
     
-    /* Enable receiver and transmitter, and fire receive complete interrupts */ 
-    UCSR1B = (1<<RXEN1)|(1<<TXEN1)|(1<<RXCIE1); 
+    /* Enable receiver and transmitter */ 
+    UCSR1B = (1<<RXEN1)|(1<<TXEN1); 
     /* Set frame format: 8 data, 1 stop bit */ 
-    UCSR1C = (1<<UCSZ10)|(1<<UCSZ11);    
+    UCSR1C = (1<<UCSZ10)|(1<<UCSZ11);
+    
+    /* Enable receive byte interrupt */
+    UCSR1B |= (1<<RXCIE1);
 }
 
 void SerialPrint(uint8_t ByteToSend){

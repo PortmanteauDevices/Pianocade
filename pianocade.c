@@ -434,7 +434,7 @@ int main(void) {
 		USB_USBTask();
 		
 		MIDI_EventPacket_t ReceivedMIDIEvent;
-       while (MIDI_Device_ReceiveEventPacket(&Keyboard_MIDI_Interface, &ReceivedMIDIEvent)){
+        while (MIDI_Device_ReceiveEventPacket(&Keyboard_MIDI_Interface, &ReceivedMIDIEvent)){
             if(ReceivedMIDIEvent.CableNumber == 0 && (ReceivedMIDIEvent.Data1 & 0xF) == MIDICHANNEL){
                 if ((ReceivedMIDIEvent.Command == (0x90 >> 4)) && (ReceivedMIDIEvent.Data3 > 0)){
                     midi_notes[ReceivedMIDIEvent.Data2/12] |= (1 << (ReceivedMIDIEvent.Data2 % 12));
@@ -458,31 +458,36 @@ int main(void) {
         }
                 
         if(SerialAvailable()){
-            unsigned char midiCommand = SerialRead();
-            if(midiCommand == (0x90 & MIDICHANNEL)){
-                while(!SerialAvailable()) {};
-                unsigned char midiNote = SerialRead();
-                while(!SerialAvailable()) {};
-                unsigned char velocity = SerialRead();
-                
-                if(velocity){
-                    midi_notes[midiNote/12] |= (1 << (midiNote % 12));
-                    midi_changed = 1;
-                    midi_new = !midi_hasnotes;
-                    midi_hasnotes = 1;
-                } else {
-                    midi_notes[midiNote/12] &= ~(1 << (midiNote % 12));
-                    midi_changed = 1;
-                    midi_hasnotes = 0;
-                    midi_new = 0;
-                    for(int octave_count = 0; octave_count < 10; ++octave_count){
-                        if(midi_notes[octave_count]){
-                            midi_hasnotes = 1;
-                            break;  
-                        } 
+            unsigned char rawCommand = SerialRead();
+            unsigned char midiCommand = (rawCommand & 0xF0);
+            unsigned char channel = (rawCommand & 0x0F);
+            if(channel == MIDICHANNEL){
+                if(midiCommand == 0x90 || midiCommand == 0x80){
+                    while(!SerialAvailable()) {};
+                    unsigned char midiNote = SerialRead();
+                    while(!SerialAvailable()) {};
+                    unsigned char velocity = SerialRead();
+
+                    if(midiCommand == 0x80 || velocity == 0){
+                        midi_notes[midiNote/12] &= ~(1 << (midiNote % 12));
+                        midi_changed = 1;
+                        midi_hasnotes = 0;
+                        midi_new = 0;
+                        for(int octave_count = 0; octave_count < 10; ++octave_count){
+                            if(midi_notes[octave_count]){
+                                midi_hasnotes = 1;
+                                break;  
+                            } 
+                        }
+                    } else {
+                        midi_notes[midiNote/12] |= (1 << (midiNote % 12));
+                        midi_changed = 1;
+                        midi_new = !midi_hasnotes;
+                        midi_hasnotes = 1;
                     }
                 }
             }
+
         }
 		
     // BEGIN ANALOGUE SETTINGS
