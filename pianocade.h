@@ -39,6 +39,9 @@
     #define PORT_CONTROL PORTF
     #define DDR_CONTROL DDRF
     #define PIN_CONTROL PINF
+    
+    // Set to 8 for 24 keys, 9 for 12 keys
+    #define OCTAVE_LIMIT 8
 
     /* Macros */
     #define HINIBBLE(b) (((b) >> 4) & 0x0F)

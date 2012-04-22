@@ -739,7 +739,7 @@ static inline void processControls(){
             }
         }
         if(control & 0b01000000) {
-            if(octave < 8) { // SET TO 8 FOR 24 KEYS, 9 FOR 12
+            if(octave < OCTAVE_LIMIT) {
                 octave++;
                 octave_flag = 1;
             }
