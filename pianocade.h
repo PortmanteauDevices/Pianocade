@@ -1,16 +1,25 @@
 #ifndef PIANOCADE_H
 #define PIANOCADE_H
 
-		#include "Descriptors.h"
-		#include "Serial.h"
+    #include "Descriptors.h"
+    #include "Serial.h"
+    #include "MIDI.h"
 
-		#include <LUFA/Version.h>
-		#include <LUFA/Drivers/USB/USB.h>
-		#include <avr/pgmspace.h>
-        #include <avr/interrupt.h>
-        #include <stdlib.h>
-        #include <string.h>
-		
+    #include <LUFA/Version.h>
+    #include <LUFA/Drivers/USB/USB.h>
+    #include <avr/pgmspace.h>
+    #include <avr/interrupt.h>
+    #include <stdlib.h>
+    #include <string.h>
+    
+    extern USB_ClassInfo_MIDI_Device_t Keyboard_MIDI_Interface;
+
+    extern uint16_t midi_notes[10];
+    extern uint8_t midi_changed ;
+    extern uint8_t midi_new;
+    extern uint8_t midi_hasnotes ;
+        
+        
     /* Registers */
     #define PORT_DAC PORTA
     #define DDR_DAC DDRA
@@ -31,8 +40,6 @@
     #define PORT_CONTROL PORTF
     #define DDR_CONTROL DDRF
     #define PIN_CONTROL PINF
-
-    #define MIDICHANNEL 0
     
     /* Macros */
     #define HINIBBLE(b) (((b) >> 4) & 0x0F)
@@ -41,7 +48,6 @@
     #define TOTAL_KEYS 12
     #define MAXCHORD TOTAL_KEYS
     #define CURRENT_NOTE (chord[arp_pos] + shift)
-    #define MIDI_NOTE (chord[arp_pos])
     #define BEND_SPEED 20
     #define BEND_MAX 8
     #define DEBOUNCE 50
@@ -81,13 +87,6 @@
     void random_arp(void);
 
     /*
-    * MIDI METHODS
-    */
-    void noteOn(unsigned char note);
-    void noteOff(unsigned char note);
-    void MIDI_TX(unsigned char, unsigned char, unsigned char) ;
-
-    /*
     * TABLE METHODS
     */
     void pause(uint8_t waittime);
@@ -107,12 +106,5 @@
     */
     void load_settings(uint8_t bank);
     void new_note(void);
-    
-    void SetupHardware(void);
-    
-    void EVENT_USB_Device_Connect(void);
-	void EVENT_USB_Device_Disconnect(void);
-	void EVENT_USB_Device_ConfigurationChanged(void);
-	void EVENT_USB_Device_ControlRequest(void);
 
 #endif /* end of include guard: PIANOCADE_H */
