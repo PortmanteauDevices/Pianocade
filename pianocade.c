@@ -375,37 +375,7 @@ void (*table_command[16])(uint8_t argument) = {
 };
 
 int main(void) {
-    MIDI_initialize();
-
-    (CLKPR = 0x80, CLKPR = (0)); // Set clock to 16MHz (for TEENSY BOARD)
-
-    // Set DDR pins to output
-    DDR_DAC = 0b1111;
-
-    // Internal pull-ups
-    PORT_CONTROL |= 0b11111111; // controls
-    PORT_NOTES0 |= 0b11111111; // Notes C0-G0
-    PORT_NOTES1 |= 0b11111111; // Notes G#0-D#1
-    PORT_NOTES2 |= 0b11111111; // Notes E1-B1
-
-    TCCR2A = 0b00000010; //CTC mode, all pins detached
-    TCCR2B = 0; // Stopped; when started, will set to clk/256
-    OCR2A = 255; // Overflow level
-    TIMSK2 = 0b010;
-
-    TCCR1A = 0b00000000;
-    TCCR1B = 0b00000000; //Prescaler value
-
-    TIMSK1 = 0b110; //Enable output compare B and A interrupt on timer 1
-
-    TCCR0A = 0b10; // CTC
-    TCCR0B = 0b101; // clk/1024
-    OCR0A = 10; // Volume timer
-    TIMSK0 = 0b10;
-
-    load_settings(0);
-    sei();
-
+    pianocadeSetup();
     for(;;) {
         MIDI_processInput();
 
@@ -414,177 +384,16 @@ int main(void) {
         OCR2A = arp_speed + 10;
         // END ANALOGUE SETTINGS
 
-        // BEGIN READ ALL NOTES AND CONTROLS
+        // READ ALL NOTES AND CONTROLS
+        readPins();
+        debouncePins();
 
-        control = (~PIN_CONTROL);
-
-        pinreadbuffer = (~PIN_NOTES0);
-        notes_pressed = pinreadbuffer;
-
-        pinreadbuffer = (~PIN_NOTES1);
-        notes_pressed |= ((uint32_t)pinreadbuffer << 8);
-
-        pinreadbuffer = (~PIN_NOTES2);
-        notes_pressed |= ((uint32_t)pinreadbuffer << 16);
-        // END READ ALL NOTES AND CONTROLS
-
-        //BEGIN DEBOUNCE
-        if(notes_pressed == debounce_notes){
-            debounce_notes_count++;
-        } else {
-            debounce_notes_count = 0;
-            debounce_notes = notes_pressed;
-        }
-
-        if(control == debounce_control){
-            debounce_control_count++;
-        } else {
-            debounce_control_count = 0;
-            debounce_control = control;
-        }
-
-        /*pinread = PIND;
-        if( debounce_held == !((pinread >> 7) & 1)){
-            if(++debounce_held_count > HELD_DEBOUNCE){
-                held_state = debounce_held;
-            };
-        } else {
-            debounce_held_count = 0;
-            debounce_held = !((pinread >> 7) & 1);
-        }*/
-        // END DEBOUNCE
-
-        // BEGIN PROCESS HOLD BUTTON
-        if( (held_state != last_held_state)){
-            last_held_state = held_state;
-            if(held_state){
-                if(held_flag || notes_pressed){ // This OR condition ensures that a hold condition is only engaged if notes are pressed
-                    held_flag = !held_flag;
-                    held_changed = 1;
-                    if(held_flag){
-                        held_notes[octave] |= (uint16_t)(notes_pressed & 0b111111111111);
-                        held_notes[octave + 1] |= (uint16_t)(notes_pressed >> 12);
-                    } else {
-                        memset(held_notes, 0, 20);
-
-                    }
-                }
-            }
-        }
-        // END PROCESS HOLD BUTTON
-
-        // BEGIN PROCESS CONTROL SEQUENCES
-        if((last_control != control) && (debounce_control_count > CONTROL_DEBOUNCE)){
-            last_control = control;
-
-            if(control & 0b10000000) {
-                if(octave) {
-                    octave--;
-                    octave_flag = 1;
-                }
-            }
-            if(control & 0b01000000) {
-                if(octave < 8) { // SET TO 8 FOR 24 KEYS, 9 FOR 12
-                    octave++;
-                    octave_flag = 1;
-                }
-            }
-            autobend = &autobend_return;
-            if(control & 0b00100000) {
-                autobend = &autobend_up;
-                //arp_mode = (arp_mode + 1) % ARPMODES;
-                //if(duty_cycle > 1) duty_cycle--;
-            }
-            if(control & 0b00010000) {
-                autobend = &autobend_down;
-                //arp_mode = (arp_mode + ARPMODES - 1) % ARPMODES;
-                //if(duty_cycle < 3) duty_cycle++;
-            }
-            if (control & 0b00001111) {
-                last_envelope |= (control & 0b1111);
-                current_envelope = last_envelope - 1;
-                load_settings(current_envelope);
-            } else {
-                last_envelope = 0;
-            }
-        }
-        // END PROCESS CONTROL SEQUENCES
+        processHold();
+        processControls();
 
         // BEGIN PROCESS NOTES
-        if( ( (last_notes_pressed != notes_pressed) && (debounce_notes_count > NOTES_DEBOUNCE)) || octave_flag || held_changed || midi_changed){
-            chord_length = 0;
-
-            if(held_flag && held_state){ // if the held button is pressed, add the currently pressed notes to the hold
-                held_notes[octave] |= (uint16_t)(notes_pressed & 0b111111111111);
-                held_notes[octave + 1] |= (uint16_t)(notes_pressed >> 12);
-            }
-            memcpy(all_notes, held_notes, 20);
-            if(midi_hasnotes){
-                for(int i = 0; i < 10; ++i){
-                    all_notes[i] |= midi_notes[i];
-                }
-            }
-            all_notes[octave] |= (uint16_t)(notes_pressed & 0b111111111111);
-            all_notes[octave + 1] |= (uint16_t)(notes_pressed >> 12);
-
-            if(notes_pressed || held_flag || midi_hasnotes){ // Checks if any notes are pressed
-                for(int octave_count = 0; octave_count < 10; ++octave_count){
-                    if(all_notes[octave_count]){
-                        for(int key_count = 0; key_count < 12; ++key_count){
-                            if( (all_notes[octave_count] >> key_count) & 1 ){
-                                chord[chord_length] = key_count + 12*octave_count;
-
-                    // If it is newly pressed...
-                                if( ((octave_count == octave) && !((last_notes_pressed >> key_count) & 1)) || ((octave_count == octave+1) && !((last_notes_pressed >> (key_count+12)) & 1)) ){
-                                    arp_pos = chord_length; // ... adjust arpeggiation index to current note
-                                    arp_count = 0; // ... reset arpeggiation counter (do we actually want this?)
-                                    shift = 0;
-                                    TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]); // ... change the prescaler value to prevent "ghosting"
-                                }
-
-                                chord_length++;
-                            }
-                        }
-                    }
-                }
-                if(chord_length > 1){ // It's a real chord
-                    TCCR2B = 0b00000110; // Start arpeggiator clock: Prescaler at clk/256
-                } else { // It's only a single note
-                    arp_pos = 0; // Move arpeggiator to first position
-                    TCCR2B = 0; // Stop arpeggiator clock
-                    shift = 0;
-                    TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]);
-                    if(last_notes_pressed) {
-                        MIDI_noteOff(lastnote);
-                    }
-                    lastnote = MIDI_NOTE;
-                    if(chord_length){
-                        MIDI_noteOn(MIDI_NOTE);
-                    }
-                    arp_count = 0;
-                }
-                if((!last_notes_pressed || midi_new) && !held_flag){ // If no notes were pressed before, begin the attack phase
-                    shift = 0;
-                    TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]);
-                    new_note();
-                }
-            } else if (!octave_flag) { // No notes are pressed, so start the release phase, stop last note, etc
-            // ENVELOPE: RELEASE NOTE
-                shift = 0;
-                TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]);
-                if(jump_flag) table_pos = jump_on_release << 1;
-                table_delay = 0;
-                table_timer = TABLE_SPEED;
-                MIDI_noteOff(lastnote);
-                TCCR2B = 0;
-            }
-            last_notes_pressed = notes_pressed;
-            octave_flag = 0;
-            held_changed = 0;
-            midi_changed = 0;
-        }
+        processNotes();
         // END PROCESS NOTES
-
     }
 }
 
@@ -821,4 +630,212 @@ void new_note(){
     memset(table_localdata,0,16);
     table_timer = TABLE_SPEED;
     muteflag = 0;
+}
+
+static inline void pianocadeSetup(){
+    MIDI_initialize();
+
+    (CLKPR = 0x80, CLKPR = (0)); // Set clock to 16MHz (for TEENSY BOARD)
+
+    // Set DDR pins to output
+    DDR_DAC = 0b1111;
+
+    // Internal pull-ups
+    PORT_CONTROL |= 0b11111111; // controls
+    PORT_NOTES0 |= 0b11111111; // Notes C0-G0
+    PORT_NOTES1 |= 0b11111111; // Notes G#0-D#1
+    PORT_NOTES2 |= 0b11111111; // Notes E1-B1
+
+    TCCR2A = 0b00000010; //CTC mode, all pins detached
+    TCCR2B = 0; // Stopped; when started, will set to clk/256
+    OCR2A = 255; // Overflow level
+    TIMSK2 = 0b010;
+
+    TCCR1A = 0b00000000;
+    TCCR1B = 0b00000000; //Prescaler value
+
+    TIMSK1 = 0b110; //Enable output compare B and A interrupt on timer 1
+
+    TCCR0A = 0b10; // CTC
+    TCCR0B = 0b101; // clk/1024
+    OCR0A = 10; // Volume timer
+    TIMSK0 = 0b10;
+
+    load_settings(0);
+    sei();    
+}
+
+static inline void readPins(){
+    control = (~PIN_CONTROL);
+
+    pinreadbuffer = (~PIN_NOTES0);
+    notes_pressed = pinreadbuffer;
+
+    pinreadbuffer = (~PIN_NOTES1);
+    notes_pressed |= ((uint32_t)pinreadbuffer << 8);
+
+    pinreadbuffer = (~PIN_NOTES2);
+    notes_pressed |= ((uint32_t)pinreadbuffer << 16);
+    
+    // Read hold button(s)
+    //pinread = PIND;
+}
+
+static inline void debouncePins(){
+    // Debounce note keys
+    if(notes_pressed == debounce_notes){
+        debounce_notes_count++;
+    } else {
+        debounce_notes_count = 0;
+        debounce_notes = notes_pressed;
+    }
+
+    // Debounce control keys
+    if(control == debounce_control){
+        debounce_control_count++;
+    } else {
+        debounce_control_count = 0;
+        debounce_control = control;
+    }
+    
+    // Debounce hold button
+    if( debounce_held == !((pinread >> 7) & 1)){
+        if(++debounce_held_count > HELD_DEBOUNCE){
+            held_state = debounce_held;
+        };
+    } else {
+        debounce_held_count = 0;
+        debounce_held = !((pinread >> 7) & 1);
+    }
+}
+
+static inline void processHold(){
+    if( (held_state != last_held_state)){
+        last_held_state = held_state;
+        if(held_state){
+            if(held_flag || notes_pressed){ // This OR condition ensures that a hold condition is only engaged if notes are pressed
+                held_flag = !held_flag;
+                held_changed = 1;
+                if(held_flag){
+                    held_notes[octave] |= (uint16_t)(notes_pressed & 0b111111111111);
+                    held_notes[octave + 1] |= (uint16_t)(notes_pressed >> 12);
+                } else {
+                    memset(held_notes, 0, 20);
+
+                }
+            }
+        }
+    }
+}
+
+static inline void processControls(){
+    if((last_control != control) && (debounce_control_count > CONTROL_DEBOUNCE)){
+        last_control = control;
+
+        if(control & 0b10000000) {
+            if(octave) {
+                octave--;
+                octave_flag = 1;
+            }
+        }
+        if(control & 0b01000000) {
+            if(octave < 8) { // SET TO 8 FOR 24 KEYS, 9 FOR 12
+                octave++;
+                octave_flag = 1;
+            }
+        }
+        autobend = &autobend_return;
+        if(control & 0b00100000) {
+            autobend = &autobend_up;
+            //arp_mode = (arp_mode + 1) % ARPMODES;
+            //if(duty_cycle > 1) duty_cycle--;
+        }
+        if(control & 0b00010000) {
+            autobend = &autobend_down;
+            //arp_mode = (arp_mode + ARPMODES - 1) % ARPMODES;
+            //if(duty_cycle < 3) duty_cycle++;
+        }
+        if (control & 0b00001111) {
+            last_envelope |= (control & 0b1111);
+            current_envelope = last_envelope - 1;
+            load_settings(current_envelope);
+        } else {
+            last_envelope = 0;
+        }
+    }
+}
+
+static inline void processNotes(){
+    if( ( (last_notes_pressed != notes_pressed) && (debounce_notes_count > NOTES_DEBOUNCE)) || octave_flag || held_changed || midi_changed){
+        chord_length = 0;
+
+        if(held_flag && held_state){ // if the held button is pressed, add the currently pressed notes to the hold
+            held_notes[octave] |= (uint16_t)(notes_pressed & 0b111111111111);
+            held_notes[octave + 1] |= (uint16_t)(notes_pressed >> 12);
+        }
+        memcpy(all_notes, held_notes, 20);
+        if(midi_hasnotes){
+            for(int i = 0; i < 10; ++i){
+                all_notes[i] |= midi_notes[i];
+            }
+        }
+        all_notes[octave] |= (uint16_t)(notes_pressed & 0b111111111111);
+        all_notes[octave + 1] |= (uint16_t)(notes_pressed >> 12);
+
+        if(notes_pressed || held_flag || midi_hasnotes){ // Checks if any notes are pressed
+            for(int octave_count = 0; octave_count < 10; ++octave_count){
+                if(all_notes[octave_count]){
+                    for(int key_count = 0; key_count < 12; ++key_count){
+                        if( (all_notes[octave_count] >> key_count) & 1 ){
+                            chord[chord_length] = key_count + 12*octave_count;
+
+                            // If it is newly pressed...
+                            if( ((octave_count == octave) && !((last_notes_pressed >> key_count) & 1)) || ((octave_count == octave+1) && !((last_notes_pressed >> (key_count+12)) & 1)) ){
+                                arp_pos = chord_length; // ... adjust arpeggiation index to current note
+                                arp_count = 0; // ... reset arpeggiation counter (do we actually want this?)
+                                shift = 0;
+                                TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]); // ... change the prescaler value to prevent "ghosting"
+                            }
+
+                            chord_length++;
+                        }
+                    }
+                }
+            }
+            if(chord_length > 1){ // It's a real chord
+                TCCR2B = 0b00000110; // Start arpeggiator clock: Prescaler at clk/256
+            } else { // It's only a single note
+                arp_pos = 0; // Move arpeggiator to first position
+                TCCR2B = 0; // Stop arpeggiator clock
+                shift = 0;
+                TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]);
+                if(last_notes_pressed) {
+                    MIDI_noteOff(lastnote);
+                }
+                lastnote = MIDI_NOTE;
+                if(chord_length){
+                    MIDI_noteOn(MIDI_NOTE);
+                }
+                arp_count = 0;
+            }
+            if((!last_notes_pressed || midi_new) && !held_flag){ // If no notes were pressed before, begin the attack phase
+                shift = 0;
+                TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]);
+                new_note();
+            }
+        } else if (!octave_flag) { // No notes are pressed, so start the release phase, stop last note, etc
+        // ENVELOPE: RELEASE NOTE
+            shift = 0;
+            TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]);
+            if(jump_flag) table_pos = jump_on_release << 1;
+            table_delay = 0;
+            table_timer = TABLE_SPEED;
+            MIDI_noteOff(lastnote);
+            TCCR2B = 0;
+        }
+        last_notes_pressed = notes_pressed;
+        octave_flag = 0;
+        held_changed = 0;
+        midi_changed = 0;
+    }
 }
