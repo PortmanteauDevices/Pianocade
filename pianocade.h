@@ -11,15 +11,14 @@
     #include <avr/interrupt.h>
     #include <stdlib.h>
     #include <string.h>
-    
+
     extern USB_ClassInfo_MIDI_Device_t Keyboard_MIDI_Interface;
 
     extern uint16_t midi_notes[10];
     extern uint8_t midi_changed ;
     extern uint8_t midi_new;
     extern uint8_t midi_hasnotes ;
-        
-        
+
     /* Registers */
     #define PORT_DAC PORTA
     #define DDR_DAC DDRA
@@ -31,16 +30,16 @@
     #define PORT_NOTES1 PORTC
     #define DDR_NOTES1 DDRC
     #define PIN_NOTES1 PINC
-    
+
     #define PORT_NOTES2 PORTB
     #define DDR_NOTES2 DDRB
     #define PIN_NOTES2 PINB
-    
+
     // NOTE: to use PORTF, JTAF interface must be disabled
     #define PORT_CONTROL PORTF
     #define DDR_CONTROL DDRF
     #define PIN_CONTROL PINF
-    
+
     /* Macros */
     #define HINIBBLE(b) (((b) >> 4) & 0x0F)
     #define LONIBBLE(b) ((b) & 0x0F)

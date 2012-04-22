@@ -50,7 +50,7 @@ void MIDI_noteOff(unsigned char note){
 static void MIDI_processUSB(void){
     MIDI_Device_USBTask(&Keyboard_MIDI_Interface);
     USB_USBTask();
-    
+
     MIDI_EventPacket_t ReceivedMIDIEvent;
     while (MIDI_Device_ReceiveEventPacket(&Keyboard_MIDI_Interface, &ReceivedMIDIEvent)){
         unsigned char midiCommand = (ReceivedMIDIEvent.Command << 4);
@@ -73,8 +73,10 @@ static void MIDI_processUSB(void){
                 for(int octave_count = 0; octave_count < 10; ++octave_count){
                     if(midi_notes[octave_count]){
                         midi_hasnotes = 1;
-                        break;  
-                    } 
+                        break;
+
+                    }
+
                 }
             }*/
         }
@@ -109,7 +111,8 @@ static void _noteOn(unsigned char note){
     midi_notes[note/12] |= (1 << (note % 12));
     midi_changed = 1;
     midi_new = !midi_hasnotes;
-    midi_hasnotes = 1;    
+    midi_hasnotes = 1;
+
 }
 
 static void _noteOff(unsigned char note){
@@ -120,8 +123,10 @@ static void _noteOff(unsigned char note){
     for(int octave_count = 0; octave_count < 10; ++octave_count){
         if(midi_notes[octave_count]){
             midi_hasnotes = 1;
-            break;  
-        } 
+            break;
+
+        }
+
     }
 }
 
@@ -130,7 +135,8 @@ static void _processMIDIpacket(unsigned char midiCommand, unsigned char data1, u
         _noteOff(data1);
     } else {
         _noteOn(data1);
-    }    
+    }
+
 }
 
 void USBSetupHardware(void)

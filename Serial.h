@@ -11,6 +11,5 @@
     int SerialAvailable(void);
     unsigned char SerialPeek(void);
     unsigned char SerialRead(void);
-    
 
 #endif

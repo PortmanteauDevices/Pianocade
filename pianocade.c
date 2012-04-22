@@ -57,7 +57,6 @@ uint8_t current_envelope = 0;
 uint8_t last_envelope = 0;
 uint8_t muteflag = 0;
 
-
 void (*arpeggio[ARPMODES])(void) = {&ascending, &descending, &random_arp};
 uint8_t arp_mode;
 
@@ -136,7 +135,8 @@ const uint8_t PROGMEM banked_table[15][32] = {
     0, 0, // D
     0, 0, // E
     0x30, 0, // F
-  },  
+  },
+
   {  // BANK 3, 12.5% square
     0x70, 0, // 0
     0, 0, // 1
@@ -356,12 +356,13 @@ const uint8_t PROGMEM banked_table[15][32] = {
 };
 const uint8_t PROGMEM banked_jump_flag[15] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1};
 const uint8_t PROGMEM banked_jump_on_release[15] = {0xF, 0xF, 0x2, 0xF, 0xE, 0xF, 0x1, 0x0, 0xF, 0x1, 0xF, 0xF, 0xF, 0xF, 0xF};
-  
+
 uint8_t table_localdata[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 uint8_t table_nextflag;
 void (*table_command[16])(uint8_t argument) = {
     &pause, // 0
-    &volumeup, // 1 
+    &volumeup, // 1
+
     &volumedown, // 2
     &setvolume, // 3
     &setdutycycle, // 4
@@ -375,60 +376,58 @@ void (*table_command[16])(uint8_t argument) = {
 
 int main(void) {
     MIDI_initialize();
-    
+
     (CLKPR = 0x80, CLKPR = (0)); // Set clock to 16MHz (for TEENSY BOARD)
-    
+
     // Set DDR pins to output
     DDR_DAC = 0b1111;
-  
+
     // Internal pull-ups
     PORT_CONTROL |= 0b11111111; // controls
     PORT_NOTES0 |= 0b11111111; // Notes C0-G0
     PORT_NOTES1 |= 0b11111111; // Notes G#0-D#1
     PORT_NOTES2 |= 0b11111111; // Notes E1-B1
-    
+
     TCCR2A = 0b00000010; //CTC mode, all pins detached
     TCCR2B = 0; // Stopped; when started, will set to clk/256
     OCR2A = 255; // Overflow level
     TIMSK2 = 0b010;
 
-  
     TCCR1A = 0b00000000;
     TCCR1B = 0b00000000; //Prescaler value
 
     TIMSK1 = 0b110; //Enable output compare B and A interrupt on timer 1
-  
+
     TCCR0A = 0b10; // CTC
     TCCR0B = 0b101; // clk/1024
     OCR0A = 10; // Volume timer
-    TIMSK0 = 0b10;   
-    
+    TIMSK0 = 0b10;
+
     load_settings(0);
     sei();
 
     for(;;) {
         MIDI_processInput();
-        
+
         // BEGIN ANALOGUE SETTINGS
         // This section is for future expansion, allowing analogue adjustment of arp_speed
         OCR2A = arp_speed + 10;
         // END ANALOGUE SETTINGS
-  
- 
+
         // BEGIN READ ALL NOTES AND CONTROLS
-    
+
         control = (~PIN_CONTROL);
-    
+
         pinreadbuffer = (~PIN_NOTES0);
         notes_pressed = pinreadbuffer;
-    
+
         pinreadbuffer = (~PIN_NOTES1);
         notes_pressed |= ((uint32_t)pinreadbuffer << 8);
-    
+
         pinreadbuffer = (~PIN_NOTES2);
         notes_pressed |= ((uint32_t)pinreadbuffer << 16);
         // END READ ALL NOTES AND CONTROLS
-  
+
         //BEGIN DEBOUNCE
         if(notes_pressed == debounce_notes){
             debounce_notes_count++;
@@ -436,14 +435,14 @@ int main(void) {
             debounce_notes_count = 0;
             debounce_notes = notes_pressed;
         }
-  
+
         if(control == debounce_control){
             debounce_control_count++;
         } else {
             debounce_control_count = 0;
             debounce_control = control;
         }
-  
+
         /*pinread = PIND;
         if( debounce_held == !((pinread >> 7) & 1)){
             if(++debounce_held_count > HELD_DEBOUNCE){
@@ -454,7 +453,7 @@ int main(void) {
             debounce_held = !((pinread >> 7) & 1);
         }*/
         // END DEBOUNCE
-  
+
         // BEGIN PROCESS HOLD BUTTON
         if( (held_state != last_held_state)){
             last_held_state = held_state;
@@ -466,17 +465,18 @@ int main(void) {
                         held_notes[octave] |= (uint16_t)(notes_pressed & 0b111111111111);
                         held_notes[octave + 1] |= (uint16_t)(notes_pressed >> 12);
                     } else {
-                        memset(held_notes, 0, 20);      
+                        memset(held_notes, 0, 20);
+
                     }
                 }
             }
         }
-        // END PROCESS HOLD BUTTON 
-  
+        // END PROCESS HOLD BUTTON
+
         // BEGIN PROCESS CONTROL SEQUENCES
         if((last_control != control) && (debounce_control_count > CONTROL_DEBOUNCE)){
             last_control = control;
-    
+
             if(control & 0b10000000) {
                 if(octave) {
                     octave--;
@@ -513,7 +513,7 @@ int main(void) {
         // BEGIN PROCESS NOTES
         if( ( (last_notes_pressed != notes_pressed) && (debounce_notes_count > NOTES_DEBOUNCE)) || octave_flag || held_changed || midi_changed){
             chord_length = 0;
-    
+
             if(held_flag && held_state){ // if the held button is pressed, add the currently pressed notes to the hold
                 held_notes[octave] |= (uint16_t)(notes_pressed & 0b111111111111);
                 held_notes[octave + 1] |= (uint16_t)(notes_pressed >> 12);
@@ -532,7 +532,8 @@ int main(void) {
                     if(all_notes[octave_count]){
                         for(int key_count = 0; key_count < 12; ++key_count){
                             if( (all_notes[octave_count] >> key_count) & 1 ){
-                                chord[chord_length] = key_count + 12*octave_count;    
+                                chord[chord_length] = key_count + 12*octave_count;
+
                     // If it is newly pressed...
                                 if( ((octave_count == octave) && !((last_notes_pressed >> key_count) & 1)) || ((octave_count == octave+1) && !((last_notes_pressed >> (key_count+12)) & 1)) ){
                                     arp_pos = chord_length; // ... adjust arpeggiation index to current note
@@ -582,7 +583,8 @@ int main(void) {
             held_changed = 0;
             midi_changed = 0;
         }
-        // END PROCESS NOTES 
+        // END PROCESS NOTES
+
     }
 }
 
@@ -674,7 +676,7 @@ void autobend_return(){
         }
     }
 }
-// END PITCH BEND METHODS 
+// END PITCH BEND METHODS
 
 // BEGIN ENVELOPE METHODS
 void mute(){
@@ -717,7 +719,8 @@ void random_arp(){
 
     //TODO: replace rand with something better (that gives a return value between 0 and chord_length-1, exclusive)
     arp_pos = (arp_pos + 1 + (rand() % (chord_length-1))) % chord_length;
-    shift = 0; 
+    shift = 0;
+
     TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]);
     MIDI_noteOn(MIDI_NOTE);
     lastnote = MIDI_NOTE;
@@ -785,7 +788,8 @@ void jumpto(uint8_t landing_index){ // With a second argument of 0, repeat forev
 
 void shiftbend(uint8_t increment){
     bend_step += (increment-7);
-    table_nextflag = (++table_pos % 2);  
+    table_nextflag = (++table_pos % 2);
+
 }
 
 void setbend(uint8_t increment){
