@@ -17,7 +17,7 @@
 
     extern USB_ClassInfo_MIDI_Device_t Keyboard_MIDI_Interface;
 
-    static void MIDI_TX(uint8_t MIDICommand, uint8_t MIDIPitch, uint8_t velocity);
+    static void _MIDI_send(uint8_t MIDICommand, uint8_t MIDIPitch, uint8_t velocity);
     void MIDI_noteOn(unsigned char note);
     void MIDI_noteOff(unsigned char note);
     static void MIDI_processUSB(void);

@@ -109,11 +109,11 @@
     void load_settings(uint8_t bank);
     void new_note(void);
     
-    static inline void pianocadeSetup();
-    static inline void readPins();
-    static inline void debouncePins();
-    static inline void processHold();
-    static inline void processControls();
-    static inline void processNotes();
+    static inline void pianocadeSetup(void);
+    static inline void readPins(void);
+    static inline void debouncePins(void);
+    static inline void processHold(void);
+    static inline void processControls(void);
+    static inline void processNotes(void);
     
 #endif /* end of include guard: PIANOCADE_H */
