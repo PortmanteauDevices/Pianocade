@@ -4,16 +4,20 @@
     #include "Serial.h"
     #include <LUFA/Version.h>
     #include <LUFA/Drivers/USB/USB.h>
+    #include <string.h>
 
     #define MIDI_NOTE (chord[arp_pos])
 
     #define MIDI_COMMAND_MASK 0xF0
     #define MIDI_CHANNEL_MASK 0x0F
-    #define MIDI_NOTEON 0x90
-    #define MIDI_NOTEOFF 0x80
+    #define MIDI_STATUS_NOTEON 0x90
+    #define MIDI_STATUS_NOTEOFF 0x80
+    #define MIDI_STATUS_CONTROLCHANGE 0xB0
 
     #define MIDICHANNEL 0
     #define MIDICABLE 0
+    // Default velocity as per MIDI 1.0 specs, p10
+    #define MIDI_DEFAULT_VELOCITY 0x40
 
     extern USB_ClassInfo_MIDI_Device_t Keyboard_MIDI_Interface;
 
@@ -23,9 +27,15 @@
     static void MIDI_processUSB(void);
     static void MIDI_processSerial(void);
     void MIDI_processInput(void);
-    static void _noteOn(unsigned char note);
-    static void _noteOff(unsigned char note);
-    static void _processMIDIpacket(unsigned char midiCommand, unsigned char data1, unsigned char data2);
+    
+    static void _noteOn(unsigned char channel, unsigned char note);
+    static void _noteOff(unsigned char channel, unsigned char note);
+    static void _controlChange(unsigned char channel, unsigned char data1, unsigned char data2);
+    
+    static void _processMIDIpacket(unsigned char midiCommand,
+                                   unsigned char channel,
+                                   unsigned char data1,
+                                   unsigned char data2);
 
     void USBSetupHardware(void);
 
