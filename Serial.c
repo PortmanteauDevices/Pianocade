@@ -9,6 +9,10 @@ volatile int readIndex = 0;
 ISR(USART1_RX_vect){
     unsigned char c;
     c = UDR1;
+    
+    // For now, ignore MIDI realtime messages
+    if((c >> 3) == 0b11111) return; 
+    
     int i = (writeIndex + 1) % RX_BUFFER_SIZE;
 
     // if we should be storing the received character into the location
