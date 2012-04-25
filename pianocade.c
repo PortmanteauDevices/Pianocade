@@ -433,7 +433,7 @@ ISR(TIMER0_COMPA_vect, ISR_NOBLOCK){
 }
 // BEGIN NOTE GENERATION METHODS
 void square_a(){
-    OCR1A = pgm_read_word(&note_freq[CURRENT_NOTE]) + (autobend_step + bend_step)*pgm_read_byte(&bend_depth[CURRENT_NOTE]);
+    OCR1A = pgm_read_word(&note_freq[CURRENT_NOTE]) + (autobend_step + bend_step + midi_bend_step)*pgm_read_byte(&bend_depth[CURRENT_NOTE]);
     OCR1B = (OCR1A >> duty_cycle) ;
     TCNT1 = 0;
     PORT_DAC = muteflag ? 0 : volume;
@@ -444,7 +444,7 @@ void square_b(){
 }
 
 void wave_a(){
-    OCR1A = pgm_read_word(&note_freq[CURRENT_NOTE]) + (autobend_step + bend_step)*pgm_read_byte(&bend_depth[CURRENT_NOTE]);
+    OCR1A = pgm_read_word(&note_freq[CURRENT_NOTE]) + (autobend_step + bend_step + midi_bend_step)*pgm_read_byte(&bend_depth[CURRENT_NOTE]);
     OCR1B = (OCR1A >> 1) ;
     TCNT1 = 0;
     PORT_DAC = volume ? pgm_read_byte(&saw_table[++wave_counter & 0b11111]) : 0;

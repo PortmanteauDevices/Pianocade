@@ -20,6 +20,7 @@ uint16_t midi_notes[10] = {0,0,0,0,0,0,0,0,0,0};
 uint8_t midi_changed = 0;
 uint8_t midi_new = 0;
 uint8_t midi_hasnotes = 0;
+int8_t midi_bend_step = 0;
 static uint8_t _omni = 1;
 static unsigned char _runningStatus = 0;
 
@@ -94,6 +95,12 @@ static inline void _rx_Serial(void){
             while(!SerialAvailable()) {};
             unsigned char velocity = SerialRead();
             _rx_noteOff(channel, note);
+        } else if(midiCommand == MIDI_STATUS_PITCHWHEEL){
+            while(!SerialAvailable()) {};
+            unsigned char lsb = SerialRead();
+            while(!SerialAvailable()) {};
+            unsigned char msb = SerialRead();
+            _rx_pitchWheel(lsb, msb);
         } else if(midiCommand == MIDI_STATUS_CONTROLCHANGE){
             while(!SerialAvailable()) {};
             unsigned char number = SerialRead();
@@ -143,6 +150,10 @@ static inline void _rx_noteOff(unsigned char channel, unsigned char note){
     }
 }
 
+static inline void _rx_pitchWheel(unsigned char lsb, unsigned char msb){
+    midi_bend_step = 0x40 - msb;
+}
+
 static inline void _rx_controlChange(unsigned char channel, unsigned char data1, unsigned char data2){
     if(channel == MIDICHANNEL && data1 > 119){
         // Turn off all notes
@@ -165,6 +176,8 @@ static inline void _rx_processMIDIpacket(unsigned char midiCommand,
         }
     } else if(midiCommand == MIDI_STATUS_NOTEOFF){
         _rx_noteOff(channel, data1);
+    } else if(midiCommand == MIDI_STATUS_PITCHWHEEL){
+        _rx_pitchWheel(data1, data2);
     } else if(midiCommand == MIDI_STATUS_CONTROLCHANGE){
         _rx_controlChange(channel, data1, data2);
     }

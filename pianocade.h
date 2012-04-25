@@ -15,9 +15,10 @@
     extern USB_ClassInfo_MIDI_Device_t Keyboard_MIDI_Interface;
 
     extern uint16_t midi_notes[10];
-    extern uint8_t midi_changed ;
+    extern uint8_t midi_changed;
     extern uint8_t midi_new;
-    extern uint8_t midi_hasnotes ;
+    extern uint8_t midi_hasnotes;
+    extern int8_t midi_bend_step;
 
     /* Registers */
     #define PORT_DAC PORTA
