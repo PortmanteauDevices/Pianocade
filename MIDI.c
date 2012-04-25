@@ -21,8 +21,9 @@ uint8_t midi_changed = 0;
 uint8_t midi_new = 0;
 uint8_t midi_hasnotes = 0;
 static uint8_t _omni = 1;
+static unsigned char _runningStatus = 0;
 
-static void _MIDI_send(uint8_t MIDICommand, uint8_t MIDIPitch, uint8_t velocity){
+static inline void _tx(uint8_t MIDICommand, uint8_t MIDIPitch, uint8_t velocity){
     SerialPrint(MIDICommand);
     SerialPrint(MIDIPitch);
     SerialPrint(velocity);
@@ -40,15 +41,15 @@ static void _MIDI_send(uint8_t MIDICommand, uint8_t MIDIPitch, uint8_t velocity)
     MIDI_Device_Flush(&Keyboard_MIDI_Interface);
 }
 
-void MIDI_noteOn(unsigned char note){
-    _MIDI_send(MIDI_STATUS_NOTEON | MIDICHANNEL, note, MIDI_DEFAULT_VELOCITY);
+void MIDI_tx_noteOn(unsigned char note){
+    _tx(MIDI_STATUS_NOTEON | MIDICHANNEL, note, MIDI_DEFAULT_VELOCITY);
 }
 
-void MIDI_noteOff(unsigned char note){
-    _MIDI_send(MIDI_STATUS_NOTEOFF | MIDICHANNEL, note, MIDI_DEFAULT_VELOCITY);
+void MIDI_tx_noteOff(unsigned char note){
+    _tx(MIDI_STATUS_NOTEOFF | MIDICHANNEL, note, MIDI_DEFAULT_VELOCITY);
 }
 
-static void MIDI_processUSB(void){
+static inline void _rx_USB(void){
     MIDI_Device_USBTask(&Keyboard_MIDI_Interface);
     USB_USBTask();
 
@@ -62,36 +63,67 @@ static void MIDI_processUSB(void){
             if(midiCommand == MIDI_STATUS_NOTEON ||
             midiCommand == MIDI_STATUS_NOTEOFF ||
             midiCommand == MIDI_STATUS_CONTROLCHANGE){
-                _processMIDIpacket(midiCommand, channel, ReceivedMIDIEvent.Data2, ReceivedMIDIEvent.Data3);
+                _rx_processMIDIpacket(midiCommand, channel, ReceivedMIDIEvent.Data2, ReceivedMIDIEvent.Data3);
             }
         }
     }
 }
 
-static void MIDI_processSerial(void){
+static inline void _rx_Serial(void){
     if(SerialAvailable()){
-        unsigned char rawCommand = SerialRead();
-        unsigned char midiCommand = (rawCommand & MIDI_COMMAND_MASK);
-        unsigned char channel = (rawCommand & MIDI_CHANNEL_MASK);
-        if(midiCommand == MIDI_STATUS_NOTEON ||
-         midiCommand == MIDI_STATUS_NOTEOFF ||
-         midiCommand == MIDI_STATUS_CONTROLCHANGE){
-            while(!SerialAvailable()) {};
-            unsigned char data1 = SerialRead();
-            while(!SerialAvailable()) {};
-            unsigned char data2 = SerialRead();
+        // Check if the received byte is a valid MIDI status message
+        // i.e. the MSB is set
+        if(SerialPeek() >> 7){
+            // If it is a valid status message, read the byte and set the running status
+            // NOTE: for commands that clear the running status, it is up to that command's
+            // method to set _runningStatus to 0
+            _runningStatus = SerialRead();
+        }
 
-            _processMIDIpacket(midiCommand, channel, data1, data2);
+        unsigned char midiCommand = (_runningStatus & MIDI_COMMAND_MASK);
+        unsigned char channel = (_runningStatus & MIDI_CHANNEL_MASK);
+        if(midiCommand == MIDI_STATUS_NOTEON){
+            while(!SerialAvailable()) {};
+            unsigned char note = SerialRead();
+            while(!SerialAvailable()) {};
+            unsigned char velocity = SerialRead();
+            if(velocity){
+                _rx_noteOn(channel, note);
+            } else {
+                _rx_noteOff(channel, note);
+            }
+        } else if(midiCommand == MIDI_STATUS_NOTEOFF){
+            while(!SerialAvailable()) {};
+            unsigned char note = SerialRead();
+            while(!SerialAvailable()) {};
+            unsigned char velocity = SerialRead();
+            _rx_noteOff(channel, note);
+        } else if(midiCommand == MIDI_STATUS_CONTROLCHANGE){
+            while(!SerialAvailable()) {};
+            unsigned char number = SerialRead();
+            while(!SerialAvailable()) {};
+            unsigned char value = SerialRead();
+            _rx_controlChange(channel, number, value);
+        } else if(midiCommand == 0xF0) {
+            // This is a system common message, so the running status is cleared
+            _runningStatus = 0;
+        } else if(midiCommand == 0) {
+            // The only way this can happen is if an invalid data byte has been
+            // sent, so the byte is discarded
+            SerialRead();
+        } else {
+            // Unsupported command
+            SerialRead();
         }
     }
 }
 
-void MIDI_processInput(void){
-    MIDI_processUSB();
-    MIDI_processSerial();
+void MIDI_rx(void){
+    _rx_USB();
+    _rx_Serial();
 }
 
-static void _noteOn(unsigned char channel, unsigned char note){
+static inline void _rx_noteOn(unsigned char channel, unsigned char note){
     if(_omni || channel == MIDICHANNEL){
         midi_notes[note/12] |= (1 << (note % 12));
         midi_changed = 1;
@@ -100,7 +132,7 @@ static void _noteOn(unsigned char channel, unsigned char note){
     }
 }
 
-static void _noteOff(unsigned char channel, unsigned char note){
+static inline void _rx_noteOff(unsigned char channel, unsigned char note){
     if(_omni || channel == MIDICHANNEL){
         midi_notes[note/12] &= ~(1 << (note % 12));
         midi_changed = 1;
@@ -115,7 +147,7 @@ static void _noteOff(unsigned char channel, unsigned char note){
     }
 }
 
-static void _controlChange(unsigned char channel, unsigned char data1, unsigned char data2){
+static inline void _rx_controlChange(unsigned char channel, unsigned char data1, unsigned char data2){
     if(channel == MIDICHANNEL && data1 > 119){
         // Turn off all notes
         memset(midi_notes, 0, 20);
@@ -125,20 +157,20 @@ static void _controlChange(unsigned char channel, unsigned char data1, unsigned 
     }
 }
 
-static void _processMIDIpacket(unsigned char midiCommand, 
+static inline void _rx_processMIDIpacket(unsigned char midiCommand, 
                                unsigned char channel,
                                unsigned char data1,
                                unsigned char data2){
     if(midiCommand == MIDI_STATUS_NOTEON){
         if(data2){
-            _noteOn(channel, data1);
+            _rx_noteOn(channel, data1);
         } else {
-            _noteOff(channel, data1);
+            _rx_noteOff(channel, data1);
         }
     } else if(midiCommand == MIDI_STATUS_NOTEOFF){
-        _noteOff(channel, data1);
+        _rx_noteOff(channel, data1);
     } else if(midiCommand == MIDI_STATUS_CONTROLCHANGE){
-        _controlChange(channel, data1, data2);
+        _rx_controlChange(channel, data1, data2);
     }
 
 }
@@ -180,7 +212,7 @@ void EVENT_USB_Device_ControlRequest(void)
     MIDI_Device_ProcessControlRequest(&Keyboard_MIDI_Interface);
 }
 
-void MIDI_initialize(void){
+void MIDI_init(void){
     USBSetupHardware();
     SerialBegin();
 }

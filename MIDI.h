@@ -21,18 +21,18 @@
 
     extern USB_ClassInfo_MIDI_Device_t Keyboard_MIDI_Interface;
 
-    static void _MIDI_send(uint8_t MIDICommand, uint8_t MIDIPitch, uint8_t velocity);
-    void MIDI_noteOn(unsigned char note);
-    void MIDI_noteOff(unsigned char note);
-    static void MIDI_processUSB(void);
-    static void MIDI_processSerial(void);
-    void MIDI_processInput(void);
+    static inline void _tx(uint8_t MIDICommand, uint8_t MIDIPitch, uint8_t velocity);
+    void MIDI_tx_noteOn(unsigned char note);
+    void MIDI_tx_noteOff(unsigned char note);
+    static inline void _rx_USB(void);
+    static inline void _rx_Serial(void);
+    void inline MIDI_rx(void);
     
-    static void _noteOn(unsigned char channel, unsigned char note);
-    static void _noteOff(unsigned char channel, unsigned char note);
-    static void _controlChange(unsigned char channel, unsigned char data1, unsigned char data2);
+    static inline void _rx_noteOn(unsigned char channel, unsigned char note);
+    static inline void _rx_noteOff(unsigned char channel, unsigned char note);
+    static inline void _rx_controlChange(unsigned char channel, unsigned char data1, unsigned char data2);
     
-    static void _processMIDIpacket(unsigned char midiCommand,
+    static inline void _rx_processMIDIpacket(unsigned char midiCommand,
                                    unsigned char channel,
                                    unsigned char data1,
                                    unsigned char data2);
@@ -44,5 +44,5 @@
     void EVENT_USB_Device_ConfigurationChanged(void);
     void EVENT_USB_Device_ControlRequest(void);
 
-    void MIDI_initialize(void);
+    void MIDI_init(void);
 #endif

@@ -377,7 +377,8 @@ void (*table_command[16])(uint8_t argument) = {
 int main(void) {
     pianocadeSetup();
     for(;;) {
-        MIDI_processInput();
+        // Check for and process any available MIDI input
+        MIDI_rx();
 
         // BEGIN ANALOGUE SETTINGS
         // This section is for future expansion, allowing analogue adjustment of arp_speed
@@ -388,12 +389,12 @@ int main(void) {
         readPins();
         debouncePins();
 
+        // PROCESS CONTROLS
         processHold();
         processControls();
 
-        // BEGIN PROCESS NOTES
+        // PROCESS NOTES
         processNotes();
-        // END PROCESS NOTES
     }
 }
 
@@ -497,22 +498,22 @@ void mute(){
 
 // BEGIN ARPEGGIO METHODS
 void ascending(){
-    MIDI_noteOff(lastnote);
+    MIDI_tx_noteOff(lastnote);
     arp_pos++;
     arp_pos %= chord_length;
     shift = 0;
     TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]);
-    MIDI_noteOn(MIDI_NOTE);
+    MIDI_tx_noteOn(MIDI_NOTE);
     lastnote = MIDI_NOTE;
     arp_count = 0;
     if(retrigger_flag) new_note();
 }
 
 void descending(){
-    MIDI_noteOff(lastnote);
+    MIDI_tx_noteOff(lastnote);
     shift = 0;
     TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]);
-    MIDI_noteOn(MIDI_NOTE);
+    MIDI_tx_noteOn(MIDI_NOTE);
     lastnote = MIDI_NOTE;
     arp_count = 0;
     if(arp_pos){
@@ -524,14 +525,14 @@ void descending(){
 }
 
 void random_arp(){
-    MIDI_noteOff(lastnote);
+    MIDI_tx_noteOff(lastnote);
 
     //TODO: replace rand with something better (that gives a return value between 0 and chord_length-1, exclusive)
     arp_pos = (arp_pos + 1 + (rand() % (chord_length-1))) % chord_length;
     shift = 0;
 
     TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]);
-    MIDI_noteOn(MIDI_NOTE);
+    MIDI_tx_noteOn(MIDI_NOTE);
     lastnote = MIDI_NOTE;
     arp_count = 0;
     if(retrigger_flag) new_note();
@@ -633,7 +634,7 @@ void new_note(){
 }
 
 static inline void pianocadeSetup(){
-    MIDI_initialize();
+    MIDI_init();
 
     (CLKPR = 0x80, CLKPR = (0)); // Set clock to 16MHz (for TEENSY BOARD)
 
@@ -810,11 +811,11 @@ static inline void processNotes(){
                 shift = 0;
                 TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]);
                 if(last_notes_pressed) {
-                    MIDI_noteOff(lastnote);
+                    MIDI_tx_noteOff(lastnote);
                 }
                 lastnote = MIDI_NOTE;
                 if(chord_length){
-                    MIDI_noteOn(MIDI_NOTE);
+                    MIDI_tx_noteOn(MIDI_NOTE);
                 }
                 arp_count = 0;
             }
@@ -830,7 +831,7 @@ static inline void processNotes(){
             if(jump_flag) table_pos = jump_on_release << 1;
             table_delay = 0;
             table_timer = TABLE_SPEED;
-            MIDI_noteOff(lastnote);
+            MIDI_tx_noteOff(lastnote);
             TCCR2B = 0;
         }
         last_notes_pressed = notes_pressed;
