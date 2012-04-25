@@ -60,11 +60,7 @@ static inline void _rx_USB(void){
         if(midiCommand != (ReceivedMIDIEvent.Data1 & MIDI_COMMAND_MASK)) continue;
         unsigned char channel = (ReceivedMIDIEvent.Data1 & MIDI_CHANNEL_MASK);
         if(ReceivedMIDIEvent.CableNumber == MIDICABLE){
-            if(midiCommand == MIDI_STATUS_NOTEON ||
-            midiCommand == MIDI_STATUS_NOTEOFF ||
-            midiCommand == MIDI_STATUS_CONTROLCHANGE){
-                _rx_processMIDIpacket(midiCommand, channel, ReceivedMIDIEvent.Data2, ReceivedMIDIEvent.Data3);
-            }
+            _rx_processMIDIpacket(midiCommand, channel, ReceivedMIDIEvent.Data2, ReceivedMIDIEvent.Data3);
         }
     }
 }
