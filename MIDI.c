@@ -100,7 +100,7 @@ static inline void _rx_Serial(void){
             unsigned char lsb = SerialRead();
             while(!SerialAvailable()) {};
             unsigned char msb = SerialRead();
-            _rx_pitchWheel(lsb, msb);
+            _rx_pitchWheel(channel, lsb, msb);
         } else if(midiCommand == MIDI_STATUS_CONTROLCHANGE){
             while(!SerialAvailable()) {};
             unsigned char number = SerialRead();
@@ -150,8 +150,10 @@ static inline void _rx_noteOff(unsigned char channel, unsigned char note){
     }
 }
 
-static inline void _rx_pitchWheel(unsigned char lsb, unsigned char msb){
-    midi_bend_step = 0x40 - msb;
+static inline void _rx_pitchWheel(unsigned char channel, unsigned char lsb, unsigned char msb){
+    if(_omni || channel == MIDICHANNEL){
+        midi_bend_step = 0x40 - msb;
+    }
 }
 
 static inline void _rx_controlChange(unsigned char channel, unsigned char data1, unsigned char data2){
@@ -177,7 +179,7 @@ static inline void _rx_processMIDIpacket(unsigned char midiCommand,
     } else if(midiCommand == MIDI_STATUS_NOTEOFF){
         _rx_noteOff(channel, data1);
     } else if(midiCommand == MIDI_STATUS_PITCHWHEEL){
-        _rx_pitchWheel(data1, data2);
+        _rx_pitchWheel(channel, data1, data2);
     } else if(midiCommand == MIDI_STATUS_CONTROLCHANGE){
         _rx_controlChange(channel, data1, data2);
     }

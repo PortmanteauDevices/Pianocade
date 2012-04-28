@@ -31,7 +31,7 @@
     
     static inline void _rx_noteOn(unsigned char channel, unsigned char note);
     static inline void _rx_noteOff(unsigned char channel, unsigned char note);
-    static inline void _rx_pitchWheel(unsigned char lsb, unsigned char msb);
+    static inline void _rx_pitchWheel(unsigned char channel, unsigned char lsb, unsigned char msb);
     static inline void _rx_controlChange(unsigned char channel, unsigned char data1, unsigned char data2);
     
     static inline void _rx_processMIDIpacket(unsigned char midiCommand,
