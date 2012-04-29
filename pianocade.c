@@ -13,9 +13,11 @@ uint8_t wave_counter = 0;
 
 uint8_t chord[MAXCHORD];
 uint8_t chord_length = 0;
+uint8_t last_chord_length = 0;
 
-uint16_t all_notes[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-uint16_t held_notes[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+uint16_t all_notes[OCTAVE_TOTAL] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+uint16_t last_all_notes[OCTAVE_TOTAL] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+uint16_t held_notes[OCTAVE_TOTAL] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 uint8_t held_flag = 0;
 uint8_t held_state = 0;
 uint8_t held_changed = 0;
@@ -25,9 +27,9 @@ uint8_t debounce_held_count = 0;
 uint8_t pinread = 0;
 
 uint8_t lastnote = 0;
+uint8_t note_is_playing = 0;
 
 uint8_t octave = 5;
-uint8_t octave_flag = 0;
 
 uint8_t arp_count = 0;
 volatile uint8_t arp_speed = 12;
@@ -78,7 +80,7 @@ uint8_t pinreadbuffer;
 
 const uint8_t PROGMEM banked_start_volume[15] = {0xF, 0xF, 0x0, 0xF, 0xB, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0x3};
 const uint8_t PROGMEM banked_arp_mode[15] = {0, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
-const uint8_t PROGMEM banked_arp_speed[15] = {12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 120, 120, 120, 120, 120};
+const uint8_t PROGMEM banked_arp_speed[15] = {200, 12, 12, 12, 12, 12, 12, 12, 12, 12, 120, 120, 120, 120, 120};
 const uint8_t PROGMEM banked_retrigger_flag[15] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1};
 const uint8_t PROGMEM banked_start_duty_cycle[15] = {1, 2, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 const uint8_t PROGMEM banked_table[15][32] = {
@@ -498,22 +500,22 @@ void mute(){
 
 // BEGIN ARPEGGIO METHODS
 void ascending(){
-    MIDI_tx_noteOff(lastnote);
+    if(midi_arp_output){MIDI_tx_noteOff(lastnote);}
     arp_pos++;
     arp_pos %= chord_length;
     shift = 0;
     TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]);
-    MIDI_tx_noteOn(MIDI_NOTE);
+    if(midi_arp_output){MIDI_tx_noteOn(MIDI_NOTE);}
     lastnote = MIDI_NOTE;
     arp_count = 0;
     if(retrigger_flag) new_note();
 }
 
 void descending(){
-    MIDI_tx_noteOff(lastnote);
+    if(midi_arp_output){MIDI_tx_noteOff(lastnote);}
     shift = 0;
     TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]);
-    MIDI_tx_noteOn(MIDI_NOTE);
+    if(midi_arp_output){MIDI_tx_noteOn(MIDI_NOTE);}
     lastnote = MIDI_NOTE;
     arp_count = 0;
     if(arp_pos){
@@ -525,14 +527,14 @@ void descending(){
 }
 
 void random_arp(){
-    MIDI_tx_noteOff(lastnote);
+    if(midi_arp_output){MIDI_tx_noteOff(lastnote);}
 
     //TODO: replace rand with something better (that gives a return value between 0 and chord_length-1, exclusive)
     arp_pos = (arp_pos + 1 + (rand() % (chord_length-1))) % chord_length;
     shift = 0;
 
     TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]);
-    MIDI_tx_noteOn(MIDI_NOTE);
+    if(midi_arp_output){MIDI_tx_noteOn(MIDI_NOTE);}
     lastnote = MIDI_NOTE;
     arp_count = 0;
     if(retrigger_flag) new_note();
@@ -721,8 +723,7 @@ static inline void processHold(){
                     held_notes[octave] |= (uint16_t)(notes_pressed & 0b111111111111);
                     held_notes[octave + 1] |= (uint16_t)(notes_pressed >> 12);
                 } else {
-                    memset(held_notes, 0, 20);
-
+                    memset(held_notes, 0, 2*OCTAVE_TOTAL);
                 }
             }
         }
@@ -734,15 +735,15 @@ static inline void processControls(){
         last_control = control;
 
         if(control & 0b10000000) {
-            if(octave) {
+            if(octave > OCTAVE_MIN) {
+                onOctaveChange();
                 octave--;
-                octave_flag = 1;
             }
         }
         if(control & 0b01000000) {
-            if(octave < OCTAVE_LIMIT) {
+            if(octave < OCTAVE_MAX) {
+                onOctaveChange();
                 octave++;
-                octave_flag = 1;
             }
         }
         autobend = &autobend_return;
@@ -766,17 +767,35 @@ static inline void processControls(){
     }
 }
 
+static inline void onOctaveChange(){
+    for(int key_count = 0; key_count < 24; ++key_count){
+        if((last_notes_pressed >> key_count) & 1){
+            MIDI_tx_noteOff(key_count + 12*octave);
+        }
+    }
+    last_notes_pressed = 0;
+}
+
 static inline void processNotes(){
-    if( ( (last_notes_pressed != notes_pressed) && (debounce_notes_count > NOTES_DEBOUNCE)) || octave_flag || held_changed || midi_changed){
+    uint8_t pressed_changed = (last_notes_pressed != notes_pressed) && (debounce_notes_count > NOTES_DEBOUNCE);
+    if( !midi_arp_output && pressed_changed ){
+        uint32_t pressed_diff = last_notes_pressed ^ notes_pressed;
+        for(int key_count = 0; key_count < 24; ++key_count){
+            if((pressed_diff >> key_count) & 1){
+                ((notes_pressed >> key_count) & 1) ? MIDI_tx_noteOn(key_count + 12*octave) : MIDI_tx_noteOff(key_count + 12*octave);
+            }
+        }
+    }
+    if( pressed_changed || held_changed || midi_changed){
         chord_length = 0;
 
         if(held_flag && held_state){ // if the held button is pressed, add the currently pressed notes to the hold
             held_notes[octave] |= (uint16_t)(notes_pressed & 0b111111111111);
             held_notes[octave + 1] |= (uint16_t)(notes_pressed >> 12);
         }
-        memcpy(all_notes, held_notes, 20);
+        memcpy(all_notes, held_notes, 2*OCTAVE_TOTAL);
         if(midi_hasnotes){
-            for(int i = 0; i < 10; ++i){
+            for(int i = 0; i < OCTAVE_TOTAL; ++i){
                 all_notes[i] |= midi_notes[i];
             }
         }
@@ -784,15 +803,21 @@ static inline void processNotes(){
         all_notes[octave + 1] |= (uint16_t)(notes_pressed >> 12);
 
         if(notes_pressed || held_flag || midi_hasnotes){ // Checks if any notes are pressed
-            for(int octave_count = 0; octave_count < 10; ++octave_count){
+            for(int octave_count = 0; octave_count < OCTAVE_TOTAL; ++octave_count){
                 if(all_notes[octave_count]){
                     for(int key_count = 0; key_count < 12; ++key_count){
                         if( (all_notes[octave_count] >> key_count) & 1 ){
                             chord[chord_length] = key_count + 12*octave_count;
 
                             // If it is newly pressed...
-                            if( ((octave_count == octave) && !((last_notes_pressed >> key_count) & 1)) || ((octave_count == octave+1) && !((last_notes_pressed >> (key_count+12)) & 1)) ){
+                            if( !((last_all_notes[octave_count] >> key_count) & 1) ){
+                                if(midi_arp_output && note_is_playing){MIDI_tx_noteOff(lastnote);} // ... turn the last note off
                                 arp_pos = chord_length; // ... adjust arpeggiation index to current note
+                                if(midi_arp_output){
+                                    MIDI_tx_noteOn(MIDI_NOTE); // .. turn the current note on
+                                    note_is_playing = 1;
+                                }
+                                lastnote = MIDI_NOTE;
                                 arp_count = 0; // ... reset arpeggiation counter (do we actually want this?)
                                 shift = 0;
                                 TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]); // ... change the prescaler value to prevent "ghosting"
@@ -810,32 +835,37 @@ static inline void processNotes(){
                 TCCR2B = 0; // Stop arpeggiator clock
                 shift = 0;
                 TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]);
-                if(last_notes_pressed) {
-                    MIDI_tx_noteOff(lastnote);
-                }
-                lastnote = MIDI_NOTE;
-                if(chord_length){
-                    MIDI_tx_noteOn(MIDI_NOTE);
+                if(midi_arp_output){
+                    if(note_is_playing && MIDI_NOTE != lastnote) {
+                        MIDI_tx_noteOff(lastnote);
+                        if(chord_length){
+                            MIDI_tx_noteOn(MIDI_NOTE);
+                        }
+                    }
+                    lastnote = MIDI_NOTE;
                 }
                 arp_count = 0;
             }
-            if((!last_notes_pressed || midi_new) && !held_flag){ // If no notes were pressed before, begin the attack phase
+            if(!last_chord_length){ // If no notes were pressed before, begin the attack phase
                 shift = 0;
                 TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]);
                 new_note();
             }
-        } else if (!octave_flag) { // No notes are pressed, so start the release phase, stop last note, etc
+            last_chord_length = chord_length;
+        } else { // No notes are pressed, so start the release phase, stop last note, etc
         // ENVELOPE: RELEASE NOTE
             shift = 0;
             TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]);
             if(jump_flag) table_pos = jump_on_release << 1;
             table_delay = 0;
             table_timer = TABLE_SPEED;
-            MIDI_tx_noteOff(lastnote);
+            if(midi_arp_output) { MIDI_tx_noteOff(lastnote); }
             TCCR2B = 0;
+            last_chord_length = 0;
+            note_is_playing = 0;
         }
         last_notes_pressed = notes_pressed;
-        octave_flag = 0;
+        memcpy(last_all_notes, all_notes, 2*OCTAVE_TOTAL);
         held_changed = 0;
         midi_changed = 0;
     }

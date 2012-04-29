@@ -21,6 +21,7 @@ uint8_t midi_changed = 0;
 uint8_t midi_new = 0;
 uint8_t midi_hasnotes = 0;
 int8_t midi_bend_step = 0;
+uint8_t midi_arp_output = 1;
 static uint8_t _omni = 1;
 static unsigned char _runningStatus = 0;
 

@@ -19,6 +19,7 @@
     extern uint8_t midi_new;
     extern uint8_t midi_hasnotes;
     extern int8_t midi_bend_step;
+    extern uint8_t midi_arp_output;
 
     /* Registers */
     #define PORT_DAC PORTA
@@ -41,8 +42,10 @@
     #define DDR_CONTROL DDRF
     #define PIN_CONTROL PINF
     
-    // Set to 8 for 24 keys, 9 for 12 keys
-    #define OCTAVE_LIMIT 8
+    // Set max to 8 for 24 keys, 9 for 12 keys
+    #define OCTAVE_MAX 8
+    #define OCTAVE_MIN 0
+    #define OCTAVE_TOTAL 10
 
     /* Macros */
     #define HINIBBLE(b) (((b) >> 4) & 0x0F)
@@ -116,5 +119,6 @@
     static inline void processHold(void);
     static inline void processControls(void);
     static inline void processNotes(void);
+    static inline void onOctaveChange(void);
     
 #endif /* end of include guard: PIANOCADE_H */
