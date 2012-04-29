@@ -6,8 +6,6 @@
     #include <LUFA/Drivers/USB/USB.h>
     #include <string.h>
 
-    #define MIDI_NOTE (chord[arp_pos])
-
     #define MIDI_COMMAND_MASK 0xF0
     #define MIDI_CHANNEL_MASK 0x0F
     #define MIDI_STATUS_NOTEON 0x90

@@ -53,7 +53,8 @@
     #define TOTAL_NOTES 128
     #define TOTAL_KEYS 12
     #define MAXCHORD TOTAL_KEYS
-    #define CURRENT_NOTE (chord[arp_pos] + shift)
+    #define CURRENT_PITCH (chord[arp_pos] + shift)
+    #define CURRENT_NOTE (chord[arp_pos])
     #define BEND_SPEED 20
     #define BEND_MAX 8
     #define DEBOUNCE 50

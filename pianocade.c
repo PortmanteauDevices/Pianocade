@@ -435,7 +435,7 @@ ISR(TIMER0_COMPA_vect, ISR_NOBLOCK){
 }
 // BEGIN NOTE GENERATION METHODS
 void square_a(){
-    OCR1A = pgm_read_word(&note_freq[CURRENT_NOTE]) + (autobend_step + bend_step + midi_bend_step)*pgm_read_byte(&bend_depth[CURRENT_NOTE]);
+    OCR1A = pgm_read_word(&note_freq[CURRENT_PITCH]) + (autobend_step + bend_step + midi_bend_step)*pgm_read_byte(&bend_depth[CURRENT_PITCH]);
     OCR1B = (OCR1A >> duty_cycle) ;
     TCNT1 = 0;
     PORT_DAC = muteflag ? 0 : volume;
@@ -446,7 +446,7 @@ void square_b(){
 }
 
 void wave_a(){
-    OCR1A = pgm_read_word(&note_freq[CURRENT_NOTE]) + (autobend_step + bend_step + midi_bend_step)*pgm_read_byte(&bend_depth[CURRENT_NOTE]);
+    OCR1A = pgm_read_word(&note_freq[CURRENT_PITCH]) + (autobend_step + bend_step + midi_bend_step)*pgm_read_byte(&bend_depth[CURRENT_PITCH]);
     OCR1B = (OCR1A >> 1) ;
     TCNT1 = 0;
     PORT_DAC = volume ? pgm_read_byte(&saw_table[++wave_counter & 0b11111]) : 0;
@@ -504,9 +504,9 @@ void ascending(){
     arp_pos++;
     arp_pos %= chord_length;
     shift = 0;
-    TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]);
-    if(midi_arp_output){MIDI_tx_noteOn(MIDI_NOTE);}
-    lastnote = MIDI_NOTE;
+    TCCR1B = pgm_read_byte(&prescaler[CURRENT_PITCH]);
+    if(midi_arp_output){MIDI_tx_noteOn(CURRENT_NOTE);}
+    lastnote = CURRENT_NOTE;
     arp_count = 0;
     if(retrigger_flag) new_note();
 }
@@ -514,9 +514,9 @@ void ascending(){
 void descending(){
     if(midi_arp_output){MIDI_tx_noteOff(lastnote);}
     shift = 0;
-    TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]);
-    if(midi_arp_output){MIDI_tx_noteOn(MIDI_NOTE);}
-    lastnote = MIDI_NOTE;
+    TCCR1B = pgm_read_byte(&prescaler[CURRENT_PITCH]);
+    if(midi_arp_output){MIDI_tx_noteOn(CURRENT_NOTE);}
+    lastnote = CURRENT_NOTE;
     arp_count = 0;
     if(arp_pos){
         arp_pos--;
@@ -533,9 +533,9 @@ void random_arp(){
     arp_pos = (arp_pos + 1 + (rand() % (chord_length-1))) % chord_length;
     shift = 0;
 
-    TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]);
-    if(midi_arp_output){MIDI_tx_noteOn(MIDI_NOTE);}
-    lastnote = MIDI_NOTE;
+    TCCR1B = pgm_read_byte(&prescaler[CURRENT_PITCH]);
+    if(midi_arp_output){MIDI_tx_noteOn(CURRENT_NOTE);}
+    lastnote = CURRENT_NOTE;
     arp_count = 0;
     if(retrigger_flag) new_note();
 }
@@ -814,13 +814,13 @@ static inline void processNotes(){
                                 if(midi_arp_output && note_is_playing){MIDI_tx_noteOff(lastnote);} // ... turn the last note off
                                 arp_pos = chord_length; // ... adjust arpeggiation index to current note
                                 if(midi_arp_output){
-                                    MIDI_tx_noteOn(MIDI_NOTE); // .. turn the current note on
+                                    MIDI_tx_noteOn(CURRENT_NOTE); // .. turn the current note on
                                     note_is_playing = 1;
                                 }
-                                lastnote = MIDI_NOTE;
+                                lastnote = CURRENT_NOTE;
                                 arp_count = 0; // ... reset arpeggiation counter (do we actually want this?)
                                 shift = 0;
-                                TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]); // ... change the prescaler value to prevent "ghosting"
+                                TCCR1B = pgm_read_byte(&prescaler[CURRENT_PITCH]); // ... change the prescaler value to prevent "ghosting"
                             }
 
                             chord_length++;
@@ -828,7 +828,7 @@ static inline void processNotes(){
                     }
                 }
             }
-            if( !(all_notes[MIDI_NOTE/12] >> (MIDI_NOTE % 12) & 1) ){
+            if( !(all_notes[CURRENT_NOTE/12] >> (CURRENT_NOTE % 12) & 1) ){
                 // If the current playing note is NOT set advance the arpeggio counter
                 (*arpeggio[arp_mode])();
             }
@@ -839,14 +839,14 @@ static inline void processNotes(){
             }
             if(!last_chord_length){ // If no notes were pressed before, begin the attack phase
                 shift = 0;
-                TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]);
+                TCCR1B = pgm_read_byte(&prescaler[CURRENT_PITCH]);
                 new_note();
             }
             last_chord_length = chord_length;
         } else { // No notes are pressed, so start the release phase, stop last note, etc
         // ENVELOPE: RELEASE NOTE
             shift = 0;
-            TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]);
+            TCCR1B = pgm_read_byte(&prescaler[CURRENT_PITCH]);
             if(jump_flag) table_pos = jump_on_release << 1;
             table_delay = 0;
             table_timer = TABLE_SPEED;
