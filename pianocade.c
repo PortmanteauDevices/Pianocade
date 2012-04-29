@@ -828,23 +828,14 @@ static inline void processNotes(){
                     }
                 }
             }
+            if( !(all_notes[MIDI_NOTE/12] >> (MIDI_NOTE % 12) & 1) ){
+                // If the current playing note is NOT set advance the arpeggio counter
+                (*arpeggio[arp_mode])();
+            }
             if(chord_length > 1){ // It's a real chord
                 TCCR2B = 0b00000110; // Start arpeggiator clock: Prescaler at clk/256
             } else { // It's only a single note
-                arp_pos = 0; // Move arpeggiator to first position
                 TCCR2B = 0; // Stop arpeggiator clock
-                shift = 0;
-                TCCR1B = pgm_read_byte(&prescaler[CURRENT_NOTE]);
-                if(midi_arp_output){
-                    if(note_is_playing && MIDI_NOTE != lastnote) {
-                        MIDI_tx_noteOff(lastnote);
-                        if(chord_length){
-                            MIDI_tx_noteOn(MIDI_NOTE);
-                        }
-                    }
-                    lastnote = MIDI_NOTE;
-                }
-                arp_count = 0;
             }
             if(!last_chord_length){ // If no notes were pressed before, begin the attack phase
                 shift = 0;
