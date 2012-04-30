@@ -31,6 +31,8 @@ uint8_t note_is_playing = 0;
 
 uint8_t octave = 5;
 
+uint8_t transpose = 0;
+
 uint8_t arp_count = 0;
 volatile uint8_t arp_speed = 12;
 volatile uint8_t arp_pos = 0;
@@ -80,7 +82,7 @@ uint8_t pinreadbuffer;
 
 const uint8_t PROGMEM banked_start_volume[15] = {0xFF, 0xF, 0x0, 0xF, 0xB, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0x3};
 const uint8_t PROGMEM banked_arp_mode[15] = {0, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
-const uint8_t PROGMEM banked_arp_speed[15] = {200, 12, 12, 12, 12, 12, 12, 12, 12, 12, 120, 120, 120, 120, 120};
+const uint8_t PROGMEM banked_arp_speed[15] = {12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 120, 120, 120, 120, 120};
 const uint8_t PROGMEM banked_retrigger_flag[15] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1};
 const uint8_t PROGMEM banked_start_duty_cycle[15] = {1, 2, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 const uint8_t PROGMEM banked_table[15][32] = {
@@ -378,6 +380,7 @@ void (*table_command[16])(uint8_t argument) = {
 
 int main(void) {
     pianocadeSetup();
+    initializeTranspose();
     for(;;) {
         // Check for and process any available MIDI input
         MIDI_rx();
@@ -673,6 +676,21 @@ static inline void pianocadeSetup(){
     sei();    
 }
 
+static inline void initializeTranspose(){
+    readPins();
+    for(uint8_t i = 0; i < 25; ++i){
+        if((notes_pressed >> i) & 1){
+            transpose = i % 12;
+            break;
+        }
+    }
+    while(notes_pressed){
+        readPins();
+    }
+    notes_pressed = 0;
+    control = 0;
+}
+
 static inline void readPins(){
     control = (~PIN_CONTROL);
 
@@ -725,8 +743,7 @@ static inline void processHold(){
                 held_flag = !held_flag;
                 held_changed = 1;
                 if(held_flag){
-                    held_notes[octave] |= (uint16_t)(notes_pressed & 0b111111111111);
-                    held_notes[octave + 1] |= (uint16_t)(notes_pressed >> 12);
+                    loadPressedNotes(held_notes);
                 } else {
                     memset(held_notes, 0, 2*OCTAVE_TOTAL);
                 }
@@ -783,6 +800,12 @@ static inline void onOctaveChange(){
     last_notes_pressed = 0;
 }
 
+static inline void loadPressedNotes(uint16_t noteStore[]){
+    noteStore[octave] |= (uint16_t)((notes_pressed << transpose) & 0b111111111111);
+    noteStore[octave + 1] |= (uint16_t)(notes_pressed >> (12 - transpose));
+    noteStore[octave + 2] |= (uint16_t)(notes_pressed >> (24 - transpose));
+}
+
 static inline void processNotes(){
     uint8_t pressed_changed = (last_notes_pressed != notes_pressed) && (debounce_notes_count > NOTES_DEBOUNCE);
     if( !midi_arp_output && pressed_changed ){
@@ -798,8 +821,7 @@ static inline void processNotes(){
         chord_length = 0;
 
         if(held_flag && held_state){ // if the held button is pressed, add the currently pressed notes to the hold
-            held_notes[octave] |= (uint16_t)(notes_pressed & 0b111111111111);
-            held_notes[octave + 1] |= (uint16_t)(notes_pressed >> 12);
+            loadPressedNotes(held_notes);
         }
         memcpy(all_notes, held_notes, 2*OCTAVE_TOTAL);
         if(midi_hasnotes){
@@ -808,8 +830,7 @@ static inline void processNotes(){
             }
         }
         if(midi_local_control){
-            all_notes[octave] |= (uint16_t)(notes_pressed & 0b111111111111);
-            all_notes[octave + 1] |= (uint16_t)(notes_pressed >> 12);
+            loadPressedNotes(all_notes);
         }
 
         if( (notes_pressed && midi_local_control) || held_flag || midi_hasnotes){ // Checks if any notes are pressed

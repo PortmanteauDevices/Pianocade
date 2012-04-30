@@ -118,6 +118,7 @@
     void new_note(void);
     
     static inline void pianocadeSetup(void);
+    static inline void initializeTranspose(void);
     static inline void readPins(void);
     static inline void debouncePins(void);
     static inline void processHold(void);
@@ -125,4 +126,6 @@
     static inline void processNotes(void);
     static inline void onOctaveChange(void);
     
+    static inline void loadPressedNotes(uint16_t noteStore[]);
+
 #endif /* end of include guard: PIANOCADE_H */
