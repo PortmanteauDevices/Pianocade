@@ -29,7 +29,7 @@ uint8_t pinread = 0;
 uint8_t lastnote = 0;
 uint8_t note_is_playing = 0;
 
-uint8_t octave = 5;
+uint8_t octave = 4;
 
 uint8_t transpose = 0;
 
