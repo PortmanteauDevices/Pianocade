@@ -773,9 +773,11 @@ static inline void processControls(){
 }
 
 static inline void onOctaveChange(){
-    for(int key_count = 0; key_count < 24; ++key_count){
-        if((last_notes_pressed >> key_count) & 1){
-            MIDI_tx_noteOff(key_count + 12*octave);
+    if(!midi_arp_output){
+        for(int key_count = 0; key_count < 24; ++key_count){
+            if((last_notes_pressed >> key_count) & 1){
+                MIDI_tx_noteOff(key_count + 12*octave);
+            }
         }
     }
     last_notes_pressed = 0;
