@@ -23,6 +23,7 @@ uint8_t midi_hasnotes = 0;
 int8_t midi_bend_step = 0;
 uint8_t midi_arp_output = 1; // Whether or not to output arpeggiated notes
 uint8_t midi_local_control = 1;
+uint8_t midi_velocity = MIDI_DEFAULT_VELOCITY;
 
 static uint8_t _cached_arp_output = 1;
 static uint8_t _omni = 1;
@@ -89,7 +90,7 @@ static inline void _rx_Serial(void){
             while(!SerialAvailable()) {};
             unsigned char velocity = SerialRead();
             if(velocity){
-                _rx_noteOn(channel, note);
+                _rx_noteOn(channel, note, velocity);
             } else {
                 _rx_noteOff(channel, note);
             }
@@ -130,12 +131,13 @@ void MIDI_rx(void){
     _rx_Serial();
 }
 
-static inline void _rx_noteOn(unsigned char channel, unsigned char note){
+static inline void _rx_noteOn(unsigned char channel, unsigned char note, unsigned char velocity){
     if(_omni || channel == MIDICHANNEL){
         midi_notes[note/12] |= (1 << (note % 12));
         midi_changed = 1;
         midi_new = !midi_hasnotes;
         midi_hasnotes = 1;
+        midi_velocity = velocity;
     }
 }
 
@@ -204,7 +206,7 @@ static inline void _rx_processMIDIpacket(unsigned char midiCommand,
                                unsigned char data2){
     if(midiCommand == MIDI_STATUS_NOTEON){
         if(data2){
-            _rx_noteOn(channel, data1);
+            _rx_noteOn(channel, data1, data2);
         } else {
             _rx_noteOff(channel, data1);
         }

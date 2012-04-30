@@ -21,6 +21,7 @@
     extern int8_t midi_bend_step;
     extern uint8_t midi_arp_output;
     extern uint8_t midi_local_control;
+    extern uint8_t midi_velocity;
 
     /* Registers */
     #define PORT_DAC PORTA
@@ -108,6 +109,7 @@
     void jumpto(uint8_t landing_index);
     void shiftbend(uint8_t increment);
     void setbend(uint8_t increment);
+    void setvolumevelocity(uint8_t unused);
 
     /*
     * MISCELLANEOUS METHODS

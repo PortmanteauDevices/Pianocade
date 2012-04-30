@@ -78,7 +78,7 @@ uint8_t retrigger_flag;
 
 uint8_t pinreadbuffer;
 
-const uint8_t PROGMEM banked_start_volume[15] = {0xF, 0xF, 0x0, 0xF, 0xB, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0x3};
+const uint8_t PROGMEM banked_start_volume[15] = {0xFF, 0xF, 0x0, 0xF, 0xB, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0x3};
 const uint8_t PROGMEM banked_arp_mode[15] = {0, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
 const uint8_t PROGMEM banked_arp_speed[15] = {200, 12, 12, 12, 12, 12, 12, 12, 12, 12, 120, 120, 120, 120, 120};
 const uint8_t PROGMEM banked_retrigger_flag[15] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1};
@@ -364,7 +364,6 @@ uint8_t table_nextflag;
 void (*table_command[16])(uint8_t argument) = {
     &pause, // 0
     &volumeup, // 1
-
     &volumedown, // 2
     &setvolume, // 3
     &setdutycycle, // 4
@@ -373,7 +372,8 @@ void (*table_command[16])(uint8_t argument) = {
     &jumpto, // 7
     &shiftbend, // 8
     &setbend, // 9
-    &shiftnote // A
+    &shiftnote, // A
+    &setvolumevelocity // B
 };
 
 int main(void) {
@@ -608,6 +608,11 @@ void setbend(uint8_t increment){
     bend_step = (increment-7);
     table_nextflag = (++table_pos % 2);
 }
+
+void setvolumevelocity(uint8_t unused){
+    volume = midi_velocity >> 3;
+    table_nextflag = (++table_pos % 2);
+}
 // END TABLE METHODS
 
 void load_settings(uint8_t bank){
@@ -628,7 +633,7 @@ void load_settings(uint8_t bank){
 void new_note(){
     shift = 0;
     table_pos = 0;
-    volume = start_volume;
+    volume = (start_volume > 0xF) ? (midi_velocity >> 3) : start_volume;
     duty_cycle = start_duty_cycle;
     memset(table_localdata,0,16);
     table_timer = TABLE_SPEED;
@@ -786,6 +791,7 @@ static inline void processNotes(){
             }
         }
     }
+    if(notes_pressed) midi_velocity = MIDI_DEFAULT_VELOCITY;
     if( pressed_changed || held_changed || midi_changed){
         chord_length = 0;
 
