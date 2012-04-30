@@ -799,10 +799,12 @@ static inline void processNotes(){
                 all_notes[i] |= midi_notes[i];
             }
         }
-        all_notes[octave] |= (uint16_t)(notes_pressed & 0b111111111111);
-        all_notes[octave + 1] |= (uint16_t)(notes_pressed >> 12);
+        if(midi_local_control){
+            all_notes[octave] |= (uint16_t)(notes_pressed & 0b111111111111);
+            all_notes[octave + 1] |= (uint16_t)(notes_pressed >> 12);
+        }
 
-        if(notes_pressed || held_flag || midi_hasnotes){ // Checks if any notes are pressed
+        if( (notes_pressed && midi_local_control) || held_flag || midi_hasnotes){ // Checks if any notes are pressed
             for(int octave_count = 0; octave_count < OCTAVE_TOTAL; ++octave_count){
                 if(all_notes[octave_count]){
                     for(int key_count = 0; key_count < 12; ++key_count){

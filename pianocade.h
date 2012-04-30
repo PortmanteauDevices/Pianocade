@@ -20,6 +20,7 @@
     extern uint8_t midi_hasnotes;
     extern int8_t midi_bend_step;
     extern uint8_t midi_arp_output;
+    extern uint8_t midi_local_control;
 
     /* Registers */
     #define PORT_DAC PORTA

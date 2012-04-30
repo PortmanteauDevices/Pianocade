@@ -21,7 +21,10 @@ uint8_t midi_changed = 0;
 uint8_t midi_new = 0;
 uint8_t midi_hasnotes = 0;
 int8_t midi_bend_step = 0;
-uint8_t midi_arp_output = 1;
+uint8_t midi_arp_output = 1; // Whether or not to output arpeggiated notes
+uint8_t midi_local_control = 1;
+
+static uint8_t _cached_arp_output = 1;
 static uint8_t _omni = 1;
 static unsigned char _runningStatus = 0;
 
@@ -164,6 +167,34 @@ static inline void _rx_controlChange(unsigned char channel, unsigned char data1,
         midi_changed = 1;
         midi_hasnotes = 0;
         midi_new = 0;
+        if(data1 == 121){
+            // Reset all controllers
+            midi_bend_step = 0;
+        } else if (data1 == 122){
+            // Local control
+            if(data2 > 63){
+                midi_local_control = 1;
+                midi_arp_output = _cached_arp_output;
+            } else {
+                midi_local_control = 0;
+                _cached_arp_output = midi_arp_output;
+                midi_arp_output = 0;
+            }
+        } else if (data1 == 124){
+            // Omni mode off
+            _omni = 0;
+        } else if (data1 == 125){
+            // Omni mode on
+            _omni = 1;
+        } else if (data1 == 126){
+            // Mono operation
+            midi_arp_output = 1;
+            _cached_arp_output = 1;
+        } else if (data1 == 127){
+            // Poly operation
+            midi_arp_output = 0;
+            _cached_arp_output = 0;
+        }
     }
 }
 
