@@ -54,7 +54,7 @@
     #define LONIBBLE(b) ((b) & 0x0F)
     #define TOTAL_NOTES 128
     #define TOTAL_KEYS 12
-    #define MAXCHORD TOTAL_KEYS
+    #define MAXCHORD 36
     #define CURRENT_PITCH (chord[arp_pos] + shift)
     #define CURRENT_NOTE (chord[arp_pos])
     #define BEND_SPEED 20
@@ -71,8 +71,8 @@
     /*
     * NOTE GENERATION
     */
-    void square_a(void);
-    void square_b(void);
+    static inline void square_a(void);
+    static inline void square_b(void);
     void wave_a(void);
     void wave_b(void);
 

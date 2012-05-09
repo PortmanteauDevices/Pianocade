@@ -64,8 +64,8 @@ uint8_t muteflag = 0;
 void (*arpeggio[ARPMODES])(void) = {&ascending, &descending, &random_arp};
 uint8_t arp_mode;
 
-void (*notegen_a)(void) = &square_a;
-void (*notegen_b)(void) = &square_b;
+//void (*notegen_a)(void) = &square_a;
+//void (*notegen_b)(void) = &square_b;
 
 uint8_t table_delay = 0;
 uint8_t table_timer = 0;
@@ -404,21 +404,23 @@ int main(void) {
 }
 
 // Arpeggiator timer
-ISR(TIMER2_COMPA_vect){
-    if(arp_count++ > 128){
+ISR(TIMER2_COMPA_vect, ISR_NOBLOCK){
+    if(arp_count++ > 32){
+        //TCCR1B = 0;
         (*arpeggio[arp_mode])();
+        TCCR1B = pgm_read_byte(&prescaler[CURRENT_PITCH]);
     }
 }
 
 // BEGIN NOTE GENERATION
 // Note generator -- set high according to current volume state
 ISR(TIMER1_COMPA_vect){
-    notegen_a();
+    square_a();
 }
 
 // More note generator -- bring low at COMPB interrupt, according to duty cycle
 ISR(TIMER1_COMPB_vect){
-    notegen_b();
+    square_b();
 }
 // END NOTE GENERATION
 
@@ -437,14 +439,14 @@ ISR(TIMER0_COMPA_vect, ISR_NOBLOCK){
     }
 }
 // BEGIN NOTE GENERATION METHODS
-void square_a(){
+static inline void square_a(){
     OCR1A = pgm_read_word(&note_freq[CURRENT_PITCH]) + (autobend_step + bend_step + midi_bend_step)*pgm_read_byte(&bend_depth[CURRENT_PITCH]);
     OCR1B = (OCR1A >> duty_cycle) ;
     TCNT1 = 0;
     PORT_DAC = muteflag ? 0 : volume;
 }
 
-void square_b(){
+static inline void square_b(){
     PORT_DAC = 0b0;
 }
 
@@ -507,7 +509,7 @@ void ascending(){
     arp_pos++;
     arp_pos %= chord_length;
     shift = 0;
-    TCCR1B = pgm_read_byte(&prescaler[CURRENT_PITCH]);
+//    TCCR1B = pgm_read_byte(&prescaler[CURRENT_PITCH]);
     if(midi_arp_output){MIDI_tx_noteOn(CURRENT_NOTE);}
     lastnote = CURRENT_NOTE;
     arp_count = 0;
@@ -517,7 +519,7 @@ void ascending(){
 void descending(){
     if(midi_arp_output){MIDI_tx_noteOff(lastnote);}
     shift = 0;
-    TCCR1B = pgm_read_byte(&prescaler[CURRENT_PITCH]);
+//    TCCR1B = pgm_read_byte(&prescaler[CURRENT_PITCH]);
     if(midi_arp_output){MIDI_tx_noteOn(CURRENT_NOTE);}
     lastnote = CURRENT_NOTE;
     arp_count = 0;
@@ -536,7 +538,7 @@ void random_arp(){
     arp_pos = (arp_pos + 1 + (rand() % (chord_length-1))) % chord_length;
     shift = 0;
 
-    TCCR1B = pgm_read_byte(&prescaler[CURRENT_PITCH]);
+//    TCCR1B = pgm_read_byte(&prescaler[CURRENT_PITCH]);
     if(midi_arp_output){MIDI_tx_noteOn(CURRENT_NOTE);}
     lastnote = CURRENT_NOTE;
     arp_count = 0;
@@ -864,7 +866,7 @@ static inline void processNotes(){
                 (*arpeggio[arp_mode])();
             }
             if(chord_length > 1){ // It's a real chord
-                TCCR2B = 0b00000110; // Start arpeggiator clock: Prescaler at clk/256
+                TCCR2B = 0b00000111; // Start arpeggiator clock: Prescaler at clk/1024
             } else { // It's only a single note
                 TCCR2B = 0; // Stop arpeggiator clock
             }
