@@ -10,8 +10,40 @@ ISR(USART1_RX_vect){
     unsigned char c;
     c = UDR1;
     
-    // For now, ignore MIDI realtime messages
-    if((c >> 3) == 0b11111) return; 
+    // Immediately process MIDI realtime messages
+    if((c >> 3) == 0b11111) {
+        switch(c & 0b111){
+            case 0:
+            // clock tick
+            if(midi_clock_flag) midi_tick++;
+            break;
+            case 2:
+            //start
+            if(!midi_clock_flag){
+                midi_clock_flag = 1;
+                midi_tick = midi_tempo - 1;
+            }
+            break;
+            case 3:
+            //continue
+            midi_clock_flag = 1;
+            break;
+            case 4:
+            //stop
+            midi_clock_flag = 0;
+            break;
+            case 5:
+            //undefined
+            break;
+            case 6:
+            //active sensing
+            break;
+            case 7:
+            //reset
+            break;
+        }
+        return; // Realtime messages are not added to the buffer
+    };
     
     int i = (writeIndex + 1) % RX_BUFFER_SIZE;
 

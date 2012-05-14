@@ -25,6 +25,10 @@ uint8_t midi_arp_output = 1; // Whether or not to output arpeggiated notes
 uint8_t midi_local_control = 1;
 uint8_t midi_velocity = MIDI_DEFAULT_VELOCITY;
 
+uint8_t midi_tick = 0;
+uint8_t midi_clock_flag = 0;
+uint8_t midi_tempo = 6;
+
 static uint8_t _cached_arp_output = 1;
 static uint8_t _omni = 1;
 static unsigned char _runningStatus = 0;
@@ -64,6 +68,42 @@ static inline void _rx_USB(void){
         unsigned char midiCommand = (ReceivedMIDIEvent.Command << 4);
         // For anything other than SysEx messages, the following statement should be true
         if(midiCommand != (ReceivedMIDIEvent.Data1 & MIDI_COMMAND_MASK)) continue;
+
+        // Immediately process MIDI realtime messages
+        if((ReceivedMIDIEvent.Data1 >> 3) == 0b11111){
+            switch(ReceivedMIDIEvent.Data1 & 0b111){
+                case 0:
+                // clock tick
+                if(midi_clock_flag) midi_tick++;
+                break;
+                case 2:
+                //start
+                if(!midi_clock_flag){
+                    midi_clock_flag = 1;
+                    midi_tick = midi_tempo - 1;
+                }
+                break;
+                case 3:
+                //continue
+                midi_clock_flag = 1;
+                break;
+                case 4:
+                //stop
+                midi_clock_flag = 0;
+                break;
+                case 5:
+                //undefined
+                break;
+                case 6:
+                //active sensing
+                break;
+                case 7:
+                //reset
+                break;
+            }
+            continue; // No further processing needed
+        };
+
         unsigned char channel = (ReceivedMIDIEvent.Data1 & MIDI_CHANNEL_MASK);
         if(ReceivedMIDIEvent.CableNumber == MIDICABLE){
             _rx_processMIDIpacket(midiCommand, channel, ReceivedMIDIEvent.Data2, ReceivedMIDIEvent.Data3);

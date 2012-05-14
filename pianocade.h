@@ -23,6 +23,10 @@
     extern uint8_t midi_local_control;
     extern uint8_t midi_velocity;
 
+    extern uint8_t midi_clock_flag;
+    extern uint8_t midi_tick;
+    extern uint8_t midi_tempo;
+
     /* Registers */
     #define PORT_DAC PORTA
     #define DDR_DAC DDRA

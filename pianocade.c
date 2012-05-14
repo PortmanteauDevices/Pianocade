@@ -382,6 +382,13 @@ int main(void) {
     pianocadeSetup();
     initializeTranspose();
     for(;;) {
+        // If we're on the MIDI clock, advance Arp
+        if(midi_clock_flag && midi_tick >= midi_tempo){
+            midi_tick %= midi_tempo;
+            (*arpeggio[arp_mode])();
+            TCCR1B = pgm_read_byte(&prescaler[CURRENT_PITCH]);
+        }
+
         // Check for and process any available MIDI input
         MIDI_rx();
 
@@ -405,10 +412,12 @@ int main(void) {
 
 // Arpeggiator timer
 ISR(TIMER2_COMPA_vect, ISR_NOBLOCK){
-    if(arp_count++ > 32){
-        //TCCR1B = 0;
-        (*arpeggio[arp_mode])();
-        TCCR1B = pgm_read_byte(&prescaler[CURRENT_PITCH]);
+    if(!midi_clock_flag){
+        if(arp_count++ > 32){
+            //TCCR1B = 0;
+            (*arpeggio[arp_mode])();
+            TCCR1B = pgm_read_byte(&prescaler[CURRENT_PITCH]);
+        }
     }
 }
 
