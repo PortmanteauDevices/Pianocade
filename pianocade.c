@@ -667,6 +667,7 @@ static inline void pianocadeSetup(){
     PORT_NOTES0 |= 0b11111111; // Notes C0-G0
     PORT_NOTES1 |= 0b11111111; // Notes G#0-D#1
     PORT_NOTES2 |= 0b11111111; // Notes E1-B1
+    PORTD |= 0b1; // High C
 
     TCCR2A = 0b00000010; //CTC mode, all pins detached
     TCCR2B = 0; // Stopped; when started, will set to clk/256
@@ -714,6 +715,9 @@ static inline void readPins(){
     pinreadbuffer = (~PIN_NOTES2);
     notes_pressed |= ((uint32_t)pinreadbuffer << 16);
     
+    pinreadbuffer = (~PIND);
+    if(pinreadbuffer & 1) notes_pressed |= ((uint32_t)1 << 24);
+
     // Read hold button(s)
     //pinread = PIND;
 }
@@ -802,7 +806,7 @@ static inline void processControls(){
 
 static inline void onOctaveChange(){
     if(!midi_arp_output){
-        for(int key_count = 0; key_count < 24; ++key_count){
+        for(int key_count = 0; key_count < 25; ++key_count){
             if((last_notes_pressed >> key_count) & 1){
                 MIDI_tx_noteOff(key_count + 12*octave);
             }
@@ -815,13 +819,14 @@ static inline void loadPressedNotes(uint16_t noteStore[]){
     noteStore[octave] |= (uint16_t)((notes_pressed << transpose) & 0b111111111111);
     noteStore[octave + 1] |= (uint16_t)(notes_pressed >> (12 - transpose));
     noteStore[octave + 2] |= (uint16_t)(notes_pressed >> (24 - transpose));
+    noteStore[octave + 3] |= (uint16_t)(notes_pressed >> (36 - transpose));
 }
 
 static inline void processNotes(){
     uint8_t pressed_changed = (last_notes_pressed != notes_pressed) && (debounce_notes_count > NOTES_DEBOUNCE);
     if( !midi_arp_output && pressed_changed ){
         uint32_t pressed_diff = last_notes_pressed ^ notes_pressed;
-        for(int key_count = 0; key_count < 24; ++key_count){
+        for(int key_count = 0; key_count < 25; ++key_count){
             if((pressed_diff >> key_count) & 1){
                 ((notes_pressed >> key_count) & 1) ? MIDI_tx_noteOn(key_count + 12*octave) : MIDI_tx_noteOff(key_count + 12*octave);
             }
