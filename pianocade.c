@@ -771,7 +771,7 @@ static inline void processControls(){
     if((last_control != control) && (debounce_control_count > CONTROL_DEBOUNCE)){
         last_control = control;
 
-        if(control & 0b10000000) {
+        if(control & 0b00100000) {
             if(octave > OCTAVE_MIN) {
                 onOctaveChange();
                 octave--;
@@ -784,12 +784,12 @@ static inline void processControls(){
             }
         }
         autobend = &autobend_return;
-        if(control & 0b00100000) {
+        if(control & 0b00010000) {
             autobend = &autobend_up;
             //arp_mode = (arp_mode + 1) % ARPMODES;
             //if(duty_cycle > 1) duty_cycle--;
         }
-        if(control & 0b00010000) {
+        if(control & 0b10000000) {
             autobend = &autobend_down;
             //arp_mode = (arp_mode + ARPMODES - 1) % ARPMODES;
             //if(duty_cycle < 3) duty_cycle++;
