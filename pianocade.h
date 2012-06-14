@@ -127,6 +127,7 @@
     static inline void debouncePins(void);
     static inline void processHold(void);
     static inline void processControls(void);
+    static inline void processCoins(void);
     static inline void processNotes(void);
     static inline void onOctaveChange(void);
     

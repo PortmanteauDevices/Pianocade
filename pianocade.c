@@ -48,6 +48,11 @@ uint8_t control = 0;
 uint8_t debounce_control = 0;
 uint8_t debounce_control_count = 0;
 
+uint8_t last_coin = 0;
+uint8_t coin = 0;
+uint8_t debounce_coin = 0;
+uint8_t debounce_coin_count = 0;
+
 uint32_t last_notes_pressed = 0b0;
 uint32_t notes_pressed = 0b0;
 uint32_t debounce_notes = 0b0;
@@ -404,6 +409,7 @@ int main(void) {
         // PROCESS CONTROLS
         processHold();
         processControls();
+        processCoins();
 
         // PROCESS NOTES
         processNotes();
@@ -661,13 +667,14 @@ static inline void pianocadeSetup(){
 
     // Set DDR pins to output
     DDR_DAC = 0b1111;
+    DDRD = 0b11000000; // coin lights
 
     // Internal pull-ups
     PORT_CONTROL |= 0b11111111; // controls
     PORT_NOTES0 |= 0b11111111; // Notes C0-G0
     PORT_NOTES1 |= 0b11111111; // Notes G#0-D#1
     PORT_NOTES2 |= 0b11111111; // Notes E1-B1
-    PORTD |= 0b1; // High C
+    PORTD |= 0b00110001; // High C, coin buttons
 
     TCCR2A = 0b00000010; //CTC mode, all pins detached
     TCCR2B = 0; // Stopped; when started, will set to clk/256
@@ -705,6 +712,7 @@ static inline void initializeTranspose(){
 
 static inline void readPins(){
     control = (~PIN_CONTROL);
+    coin = (~PIND);
 
     pinreadbuffer = (~PIN_NOTES0);
     notes_pressed = pinreadbuffer;
@@ -715,7 +723,7 @@ static inline void readPins(){
     pinreadbuffer = (~PIN_NOTES2);
     notes_pressed |= ((uint32_t)pinreadbuffer << 16);
     
-    pinreadbuffer = (~PIND);
+    pinreadbuffer = coin;
     if(pinreadbuffer & 1) notes_pressed |= ((uint32_t)1 << 24);
 
     // Read hold button(s)
@@ -739,6 +747,14 @@ static inline void debouncePins(){
         debounce_control = control;
     }
     
+    // Debounce coin keys
+    if(coin == debounce_coin){
+        debounce_coin_count++;
+    } else {
+        debounce_coin_count = 0;
+        debounce_coin = coin;
+    }
+
     // Debounce hold button
     if( debounce_held == !((pinread >> 7) & 1)){
         if(++debounce_held_count > HELD_DEBOUNCE){
@@ -800,6 +816,25 @@ static inline void processControls(){
             load_settings(current_envelope);
         } else {
             last_envelope = 0;
+        }
+    }
+}
+
+static inline void processCoins(){
+    if((last_coin != coin) && (debounce_coin_count > CONTROL_DEBOUNCE)){
+        last_coin = coin;
+
+        if(coin & 0b00100000) {
+            if(octave > OCTAVE_MIN) {
+                onOctaveChange();
+                octave--;
+            }
+        }
+        if(coin & 0b00010000) {
+            if(octave < OCTAVE_MAX) {
+                onOctaveChange();
+                octave++;
+            }
         }
     }
 }
