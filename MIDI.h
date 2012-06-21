@@ -2,6 +2,7 @@
 #define MIDI_PIANOCADE_H value
     #include "Descriptors.h"
     #include "Serial.h"
+    #include "Pianocade.h"
     #include <LUFA/Version.h>
     #include <LUFA/Drivers/USB/USB.h>
     #include <string.h>

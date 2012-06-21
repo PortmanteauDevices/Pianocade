@@ -15,9 +15,9 @@ uint8_t chord[MAXCHORD];
 uint8_t chord_length = 0;
 uint8_t last_chord_length = 0;
 
-uint16_t all_notes[OCTAVE_TOTAL] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-uint16_t last_all_notes[OCTAVE_TOTAL] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-uint16_t held_notes[OCTAVE_TOTAL] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+uint16_t all_notes[OCTAVE_TOTAL] = {0};
+uint16_t last_all_notes[OCTAVE_TOTAL] = {0};
+uint16_t held_notes[OCTAVE_TOTAL] = {0};
 uint8_t held_flag = 0;
 uint8_t held_state = 0;
 uint8_t held_changed = 0;
@@ -854,7 +854,6 @@ static inline void loadPressedNotes(uint16_t noteStore[]){
     noteStore[octave] |= (uint16_t)((notes_pressed << transpose) & 0b111111111111);
     noteStore[octave + 1] |= (uint16_t)(notes_pressed >> (12 - transpose));
     noteStore[octave + 2] |= (uint16_t)(notes_pressed >> (24 - transpose));
-    noteStore[octave + 3] |= (uint16_t)(notes_pressed >> (36 - transpose));
 }
 
 static inline void processNotes(){

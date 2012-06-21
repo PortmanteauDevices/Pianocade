@@ -14,19 +14,6 @@
 
     extern USB_ClassInfo_MIDI_Device_t Keyboard_MIDI_Interface;
 
-    extern uint16_t midi_notes[10];
-    extern uint8_t midi_changed;
-    extern uint8_t midi_new;
-    extern uint8_t midi_hasnotes;
-    extern int8_t midi_bend_step;
-    extern uint8_t midi_arp_output;
-    extern uint8_t midi_local_control;
-    extern uint8_t midi_velocity;
-
-    extern uint8_t midi_clock_flag;
-    extern uint8_t midi_tick;
-    extern uint8_t midi_tempo;
-
     /* Registers */
     #define PORT_DAC PORTA
     #define DDR_DAC DDRA
@@ -51,7 +38,7 @@
     // Set max to 8 for 24 keys, 9 for 12 keys
     #define OCTAVE_MAX 8
     #define OCTAVE_MIN 0
-    #define OCTAVE_TOTAL 10
+    #define OCTAVE_TOTAL 11
 
     /* Macros */
     #define HINIBBLE(b) (((b) >> 4) & 0x0F)
@@ -69,6 +56,20 @@
     #define HELD_DEBOUNCE DEBOUNCE
     #define ARPMODES 3
     #define TABLE_SPEED 24
+
+    /* External variables */
+    extern uint16_t midi_notes[OCTAVE_TOTAL];
+    extern uint8_t midi_changed;
+    extern uint8_t midi_new;
+    extern uint8_t midi_hasnotes;
+    extern int8_t midi_bend_step;
+    extern uint8_t midi_arp_output;
+    extern uint8_t midi_local_control;
+    extern uint8_t midi_velocity;
+
+    extern uint8_t midi_clock_flag;
+    extern uint8_t midi_tick;
+    extern uint8_t midi_tempo;
 
     /* Function prototypes */
 

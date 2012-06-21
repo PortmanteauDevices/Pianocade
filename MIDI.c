@@ -16,7 +16,7 @@ USB_ClassInfo_MIDI_Device_t Keyboard_MIDI_Interface =
             },
     };
 
-uint16_t midi_notes[10] = {0,0,0,0,0,0,0,0,0,0};
+uint16_t midi_notes[OCTAVE_TOTAL] = {0};
 uint8_t midi_changed = 0;
 uint8_t midi_new = 0;
 uint8_t midi_hasnotes = 0;
@@ -187,7 +187,7 @@ static inline void _rx_noteOff(unsigned char channel, unsigned char note){
         midi_changed = 1;
         midi_hasnotes = 0;
         midi_new = 0;
-        for(int octave_count = 0; octave_count < 10; ++octave_count){
+        for(int octave_count = 0; octave_count < OCTAVE_TOTAL; ++octave_count){
             if(midi_notes[octave_count]){
                 midi_hasnotes = 1;
                 break;
@@ -205,7 +205,7 @@ static inline void _rx_pitchWheel(unsigned char channel, unsigned char lsb, unsi
 static inline void _rx_controlChange(unsigned char channel, unsigned char data1, unsigned char data2){
     if(channel == MIDICHANNEL && data1 > 119){
         // Turn off all notes
-        memset(midi_notes, 0, 20);
+        memset(midi_notes, 0, 2*OCTAVE_TOTAL);
         midi_changed = 1;
         midi_hasnotes = 0;
         midi_new = 0;
