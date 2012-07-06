@@ -18,13 +18,9 @@ uint8_t last_chord_length = 0;
 uint16_t all_notes[OCTAVE_TOTAL] = {0};
 uint16_t last_all_notes[OCTAVE_TOTAL] = {0};
 uint16_t held_notes[OCTAVE_TOTAL] = {0};
-uint8_t held_flag = 0;
 uint8_t held_state = 0;
 uint8_t held_changed = 0;
-uint8_t last_held_state = 0;
-uint8_t debounce_held = 0;
-uint8_t debounce_held_count = 0;
-uint8_t pinread = 0;
+uint8_t held_hasnotes = 0;
 
 uint8_t lastnote = 0;
 uint8_t note_is_playing = 0;
@@ -407,7 +403,6 @@ int main(void) {
         debouncePins();
 
         // PROCESS CONTROLS
-        processHold();
         processControls();
         processCoins();
 
@@ -648,7 +643,7 @@ void load_settings(uint8_t bank){
     arp_speed = pgm_read_byte(&(banked_arp_speed[bank]));
     retrigger_flag = pgm_read_byte(&(banked_retrigger_flag[bank]));
     if(chord_length == 1) TCCR1B = pgm_read_byte(&prescaler[CURRENT_PITCH]);
-    if(notes_pressed || held_flag || midi_hasnotes) new_note();
+    if(notes_pressed || held_hasnotes || midi_hasnotes) new_note();
 }
 
 void new_note(){
@@ -726,9 +721,6 @@ static inline void readPins(){
     
     pinreadbuffer = coin;
     if(pinreadbuffer & 1) notes_pressed |= ((uint32_t)1 << 24);
-
-    // Read hold button(s)
-    //pinread = PIND;
 }
 
 static inline void debouncePins(){
@@ -755,32 +747,12 @@ static inline void debouncePins(){
         debounce_coin_count = 0;
         debounce_coin = coin;
     }
-
-    // Debounce hold button
-    if( debounce_held == !((pinread >> 7) & 1)){
-        if(++debounce_held_count > HELD_DEBOUNCE){
-            held_state = debounce_held;
-        };
-    } else {
-        debounce_held_count = 0;
-        debounce_held = !((pinread >> 7) & 1);
-    }
 }
 
 static inline void processHold(){
-    if( (held_state != last_held_state)){
-        last_held_state = held_state;
-        if(held_state){
-            if(held_flag || notes_pressed){ // This OR condition ensures that a hold condition is only engaged if notes are pressed
-                held_flag = !held_flag;
-                held_changed = 1;
-                if(held_flag){
-                    loadPressedNotes(held_notes);
-                } else {
-                    memset(held_notes, 0, 2*OCTAVE_TOTAL);
-                }
-            }
-        }
+    for(int i = 0; i < OCTAVE_TOTAL; ++i){
+        held_notes[i] |= all_notes[i];
+        if(held_notes[i]) held_hasnotes = 1;
     }
 }
 
@@ -826,16 +798,15 @@ static inline void processCoins(){
         last_coin = coin;
 
         if(coin & 0b00100000) {
-            if(octave > OCTAVE_MIN) {
-                onOctaveChange();
-                octave--;
-            }
+            memset(held_notes, 0, 2*OCTAVE_TOTAL);
+            held_hasnotes = 0;
+            held_changed = 1;
         }
         if(coin & 0b00010000) {
-            if(octave < OCTAVE_MAX) {
-                onOctaveChange();
-                octave++;
-            }
+            held_state = 1;
+            processHold();
+        } else {
+            held_state = 0;
         }
     }
 }
@@ -868,12 +839,9 @@ static inline void processNotes(){
         }
     }
     if(notes_pressed) midi_velocity = MIDI_DEFAULT_VELOCITY;
-    if( pressed_changed || held_changed || midi_changed){
+    if( pressed_changed || midi_changed || held_changed ){
         chord_length = 0;
 
-        if(held_flag && held_state){ // if the held button is pressed, add the currently pressed notes to the hold
-            loadPressedNotes(held_notes);
-        }
         memcpy(all_notes, held_notes, 2*OCTAVE_TOTAL);
         if(midi_hasnotes){
             for(int i = 0; i < OCTAVE_TOTAL; ++i){
@@ -883,8 +851,10 @@ static inline void processNotes(){
         if(midi_local_control){
             loadPressedNotes(all_notes);
         }
+        
+        if(held_state) processHold();
 
-        if( (notes_pressed && midi_local_control) || held_flag || midi_hasnotes){ // Checks if any notes are pressed
+        if( (notes_pressed && midi_local_control) || held_hasnotes || midi_hasnotes){ // Checks if any notes are pressed
             for(int octave_count = 0; octave_count < OCTAVE_TOTAL; ++octave_count){
                 if(all_notes[octave_count]){
                     for(int key_count = 0; key_count < 12; ++key_count){
@@ -939,7 +909,7 @@ static inline void processNotes(){
         }
         last_notes_pressed = notes_pressed;
         memcpy(last_all_notes, all_notes, 2*OCTAVE_TOTAL);
-        held_changed = 0;
         midi_changed = 0;
+        held_changed = 0;
     }
 }
