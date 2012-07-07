@@ -12,7 +12,7 @@ const uint8_t saw_table[32] PROGMEM = {0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6,
 uint8_t wave_counter = 0;
 
 uint8_t chord[MAXCHORD];
-uint8_t chord_length = 0;
+volatile uint8_t chord_length = 0;
 uint8_t last_chord_length = 0;
 
 uint16_t all_notes[OCTAVE_TOTAL] = {0};
@@ -516,8 +516,11 @@ void mute(){
 // BEGIN ARPEGGIO METHODS
 void ascending(){
     if(midi_arp_output){MIDI_tx_noteOff(lastnote);}
-    arp_pos++;
-    arp_pos %= chord_length;
+    if(arp_pos < chord_length - 1){
+        arp_pos++;
+    } else {
+        arp_pos = 0;
+    }
     shift = 0;
 //    TCCR1B = pgm_read_byte(&prescaler[CURRENT_PITCH]);
     if(midi_arp_output){MIDI_tx_noteOn(CURRENT_NOTE);}
@@ -859,12 +862,13 @@ static inline void processNotes(){
                 if(all_notes[octave_count]){
                     for(int key_count = 0; key_count < 12; ++key_count){
                         if( (all_notes[octave_count] >> key_count) & 1 ){
-                            chord[chord_length] = key_count + 12*octave_count;
+                            cli();
+                            chord[chord_length++] = key_count + 12*octave_count;
 
                             // If it is newly pressed...
                             if( !((last_all_notes[octave_count] >> key_count) & 1) ){
                                 if(midi_arp_output && note_is_playing){MIDI_tx_noteOff(lastnote);} // ... turn the last note off
-                                arp_pos = chord_length; // ... adjust arpeggiation index to current note
+                                arp_pos = chord_length-1; // ... adjust arpeggiation index to current note
                                 if(midi_arp_output){
                                     MIDI_tx_noteOn(CURRENT_NOTE); // .. turn the current note on
                                     note_is_playing = 1;
@@ -874,8 +878,7 @@ static inline void processNotes(){
                                 shift = 0;
                                 TCCR1B = pgm_read_byte(&prescaler[CURRENT_PITCH]); // ... change the prescaler value to prevent "ghosting"
                             }
-
-                            chord_length++;
+                            sei();
                         }
                     }
                 }
