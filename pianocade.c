@@ -54,7 +54,7 @@ uint32_t notes_pressed = 0b0;
 uint32_t debounce_notes = 0b0;
 uint8_t debounce_notes_count = 0;
 
-uint8_t volume = 0b1111;
+volatile uint8_t volume = 0b1111;
 uint8_t duty_cycle = 1;
 
 int8_t shift = 0;
