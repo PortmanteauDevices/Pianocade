@@ -663,6 +663,7 @@ void load_settings(uint8_t bank){
 
 void new_note(){
     shift = 0;
+    bend_step = 0;
     table_pos = 0;
     volume = (start_volume > 0xF) ? (midi_velocity >> 3) : start_volume;
     duty_cycle = start_duty_cycle;
