@@ -772,6 +772,12 @@ static inline void processHold(){
     }
 }
 
+static inline void clearHold(){
+    memset(held_notes, 0, 2*OCTAVE_TOTAL);
+    held_hasnotes = 0;
+    held_changed = 1;    
+}
+
 static inline void processControls(){
     if((last_control != control) && (debounce_control_count > CONTROL_DEBOUNCE)){
         last_control = control;
@@ -814,10 +820,9 @@ static inline void processCoins(){
         last_coin = coin;
 
         if(coin & 0b00100000) {
-            memset(held_notes, 0, 2*OCTAVE_TOTAL);
-            held_hasnotes = 0;
-            held_changed = 1;
+            clearHold();
         }
+        
         if(coin & 0b00010000) {
             held_state = 1;
             processHold();
