@@ -376,7 +376,9 @@ void (*table_command[16])(uint8_t argument) = {
     &shiftbend, // 8
     &setbend, // 9
     &shiftnote, // A
-    &setvolumevelocity // B
+    &setvolumevelocity, // B
+    &shiftnoteup, // C
+    &shiftnotedown // D
 };
 
 int main(void) {
@@ -587,6 +589,16 @@ void setdutycycle(uint8_t level){
 
 void shiftnote(uint8_t interval){
     shift += (interval-7);
+    table_nextflag = (++table_pos % 2);
+}
+
+void shiftnoteup(uint8_t interval){
+    shift += interval;
+    table_nextflag = (++table_pos % 2);
+}
+
+void shiftnotedown(uint8_t interval){
+    shift -= interval;
     table_nextflag = (++table_pos % 2);
 }
 

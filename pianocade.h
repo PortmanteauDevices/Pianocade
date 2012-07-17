@@ -109,6 +109,8 @@
     void setvolume(uint8_t level);
     void setdutycycle(uint8_t level);
     void shiftnote(uint8_t interval);
+    void shiftnoteup(uint8_t interval);
+    void shiftnotedown(uint8_t interval);
     void setnote(uint8_t interval);
     void shiftoctave(uint8_t interval);
     void jumpto(uint8_t landing_index);
