@@ -65,6 +65,9 @@ static inline void _rx_USB(void){
 
     MIDI_EventPacket_t ReceivedMIDIEvent;
     while (MIDI_Device_ReceiveEventPacket(&Keyboard_MIDI_Interface, &ReceivedMIDIEvent)){
+        // Data bytes should NEVER have bit 7 set
+        if((ReceivedMIDIEvent.Data2 || ReceivedMIDIEvent.Data3) && 0b10000000) continue;
+        
         unsigned char midiCommand = (ReceivedMIDIEvent.Command << 4);
         // For anything other than SysEx messages, the following statement should be true
         if(midiCommand != (ReceivedMIDIEvent.Data1 & MIDI_COMMAND_MASK)) continue;
