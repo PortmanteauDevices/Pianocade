@@ -445,7 +445,7 @@ ISR(TIMER0_COMPA_vect){
             --table_delay;
         } else {
             do{
-                (*table_command[HINIBBLE(table[table_pos])])(LONIBBLE(table[table_pos]));
+                (*table_command[HINIBBLE(table[table_pos % TABLE_SIZE])])(LONIBBLE(table[table_pos % TABLE_SIZE]));
             } while(table_nextflag);
         }
     }
