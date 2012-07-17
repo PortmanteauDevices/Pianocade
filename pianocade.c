@@ -902,8 +902,10 @@ static inline void processNotes(){
                 }
             }
             if( !(all_notes[CURRENT_NOTE/12] >> (CURRENT_NOTE % 12) & 1) ){
+                cli();
                 // If the current playing note is NOT set advance the arpeggio counter
                 (*arpeggio[arp_mode])();
+                sei();
             }
             if(chord_length > 1){ // It's a real chord
                 TCCR2B = 0b00000111; // Start arpeggiator clock: Prescaler at clk/1024
