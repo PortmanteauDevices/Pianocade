@@ -56,6 +56,7 @@
     #define HELD_DEBOUNCE DEBOUNCE
     #define ARPMODES 3
     #define TABLE_SPEED 24
+    #define TABLE_SIZE 32
 
     /* External variables */
     extern uint16_t midi_notes[OCTAVE_TOTAL];

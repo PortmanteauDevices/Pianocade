@@ -74,7 +74,7 @@ uint8_t table_pos = 0;
 
 uint8_t start_volume;
 uint8_t start_duty_cycle;
-uint8_t table[32];
+uint8_t table[TABLE_SIZE];
 uint8_t jump_on_release;
 uint8_t jump_flag;
 uint8_t retrigger_flag;
@@ -86,7 +86,7 @@ const uint8_t PROGMEM banked_arp_mode[15] = {0, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0,
 const uint8_t PROGMEM banked_arp_speed[15] = {12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 120, 120, 120, 120, 120};
 const uint8_t PROGMEM banked_retrigger_flag[15] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1};
 const uint8_t PROGMEM banked_start_duty_cycle[15] = {1, 2, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-const uint8_t PROGMEM banked_table[15][32] = {
+const uint8_t PROGMEM banked_table[15][TABLE_SIZE] = {
   {  // BANK 0, 50% square
     0x70, 0, // 0
     0, 0, // 1
@@ -649,7 +649,7 @@ void load_settings(uint8_t bank){
     mute();
     start_volume = pgm_read_byte(&(banked_start_volume[bank]));
     start_duty_cycle = pgm_read_byte(&(banked_start_duty_cycle[bank]));
-    memcpy_P(table, &(banked_table[bank]), 32);
+    memcpy_P(table, &(banked_table[bank]), TABLE_SIZE);
 
     jump_on_release = pgm_read_byte(&(banked_jump_on_release[bank]));
     jump_flag = pgm_read_byte(&(banked_jump_flag[bank]));
