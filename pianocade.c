@@ -657,6 +657,10 @@ void load_settings(uint8_t bank){
     arp_mode = pgm_read_byte(&(banked_arp_mode[bank])) % ARPMODES;
     arp_speed = pgm_read_byte(&(banked_arp_speed[bank]));
     retrigger_flag = pgm_read_byte(&(banked_retrigger_flag[bank]));
+    load_settings_ifPlaying();
+}
+
+void load_settings_ifPlaying(void){
     if(chord_length == 1) TCCR1B = pgm_read_byte(&prescaler[CURRENT_PITCH]);
     if(notes_pressed || held_hasnotes || midi_hasnotes) new_note();
 }

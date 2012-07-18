@@ -123,6 +123,7 @@
     * MISCELLANEOUS METHODS
     */
     void load_settings(uint8_t bank);
+    void load_settings_ifPlaying(void);
     void new_note(void);
     
     static inline void pianocadeSetup(void);

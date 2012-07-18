@@ -29,6 +29,10 @@ uint8_t midi_tick = 0;
 uint8_t midi_clock_flag = 0;
 uint8_t midi_tempo = 6;
 
+uint8_t midi_sysex_buffer[MIDI_SYSEX_BUFFER_SIZE] = {0};
+uint8_t midi_sysex_buffer_pointer = 0;
+uint8_t midi_sysex_flag = false;
+
 static uint8_t _cached_arp_output = 1;
 static uint8_t _omni = 1;
 static unsigned char _runningStatus = 0;
@@ -69,9 +73,13 @@ static inline void _rx_USB(void){
         if((ReceivedMIDIEvent.Data2 || ReceivedMIDIEvent.Data3) && 0b10000000) continue;
         
         unsigned char midiCommand = (ReceivedMIDIEvent.Command << 4);
-        // For anything other than SysEx messages, the following statement should be true
-        if(midiCommand != (ReceivedMIDIEvent.Data1 & MIDI_COMMAND_MASK)) continue;
 
+        // For anything other than SysEx messages, the following statement should be true
+        // so if it's not, do not process the message
+       /* if((midiCommand != (ReceivedMIDIEvent.Data1 & MIDI_COMMAND_MASK)) 
+        // and this one covers SysEx messages
+            && (midiCommand != 0x40 || midiCommand != 0x50 || midiCommand != 0x60 || midiCommand != 0x70)) continue;
+*/
         // Immediately process MIDI realtime messages
         if((ReceivedMIDIEvent.Data1 >> 3) == 0b11111){
             switch(ReceivedMIDIEvent.Data1 & 0b111){
@@ -243,6 +251,67 @@ static inline void _rx_controlChange(unsigned char channel, unsigned char data1,
     }
 }
 
+static inline void _rx_sysEx(unsigned char byte1, unsigned char byte2, unsigned char byte3){
+    if(midi_sysex_flag){
+        // Message has already started
+        _process_sysEx_byte(byte1);
+        _process_sysEx_byte(byte2);
+        _process_sysEx_byte(byte3);
+    } else {
+        if(byte1 == 0xF0){
+            midi_sysex_flag = true;
+            midi_sysex_buffer_pointer = 0;
+            _process_sysEx_byte(byte2);
+            _process_sysEx_byte(byte3);
+        } else {
+            // TODO this is an error state; do something intelligent
+        }
+    }
+}
+
+static inline void _process_sysEx_byte(unsigned char data){
+    if(midi_sysex_flag){
+        if(data == 0xF7){
+            // Message complete
+            midi_sysex_flag = false;
+            _complete_sysEx();
+        } else {
+            if(midi_sysex_buffer_pointer < MIDI_SYSEX_BUFFER_SIZE) {
+                midi_sysex_buffer[midi_sysex_buffer_pointer++] = data;
+            } else {
+                midi_sysex_flag = false;
+            }
+        }
+    }
+}
+
+static inline void _complete_sysEx(void){
+    int readIndex = 0;
+    if(midi_sysex_buffer_pointer == MIDI_SYSEX_BUFFER_SIZE
+        && midi_sysex_buffer[readIndex++] == MIDI_MANUFACTURER_ID0
+        && midi_sysex_buffer[readIndex++] == MIDI_MANUFACTURER_ID1
+        && midi_sysex_buffer[readIndex++] == MIDI_MANUFACTURER_ID2
+        && midi_sysex_buffer[readIndex++] == MIDI_SYSEX_VERSION
+        )
+    {
+        mute();
+        start_volume = midi_sysex_buffer[readIndex++] & 0b1111;
+        start_duty_cycle = midi_sysex_buffer[readIndex++] & 0b1111;
+        
+        for(int i = 0; i < TABLE_SIZE; ++i){
+            table[i] = ((midi_sysex_buffer[readIndex++] & 0b1111) << 4) | (midi_sysex_buffer[readIndex++] & 0b1111);
+        }
+
+        jump_on_release = midi_sysex_buffer[readIndex++] & 0b1111;
+        jump_flag = midi_sysex_buffer[readIndex++] & 0b1111;
+
+        arp_mode = (midi_sysex_buffer[readIndex++] & 0b1111) % ARPMODES;
+        arp_speed = midi_sysex_buffer[readIndex++] & 0b1111;
+        retrigger_flag = midi_sysex_buffer[readIndex++] & 0b1111;
+        load_settings_ifPlaying();
+    }
+}
+
 static inline void _rx_processMIDIpacket(unsigned char midiCommand, 
                                unsigned char channel,
                                unsigned char data1,
@@ -259,8 +328,9 @@ static inline void _rx_processMIDIpacket(unsigned char midiCommand,
         _rx_pitchWheel(channel, data1, data2);
     } else if(midiCommand == MIDI_STATUS_CONTROLCHANGE){
         _rx_controlChange(channel, data1, data2);
+    } else if(midiCommand == MIDI_SYSEX_START_OR_CONTINUE || midiCommand == 0x50 || midiCommand == 0x60 || midiCommand == 0x70){
+        _rx_sysEx(channel, data1, data2);
     }
-
 }
 
 void USBSetupHardware(void)
