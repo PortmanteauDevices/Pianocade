@@ -115,9 +115,8 @@ static inline void _rx_USB(void){
             continue; // No further processing needed
         };
 
-        unsigned char channel = (ReceivedMIDIEvent.Data1 & MIDI_CHANNEL_MASK);
         if(ReceivedMIDIEvent.CableNumber == MIDICABLE){
-            _rx_processMIDIpacket(midiCommand, channel, ReceivedMIDIEvent.Data2, ReceivedMIDIEvent.Data3);
+            _rx_processMIDIpacket(midiCommand, ReceivedMIDIEvent.Data1, ReceivedMIDIEvent.Data2, ReceivedMIDIEvent.Data3);
         }
     }
 }
@@ -294,28 +293,34 @@ static inline void _complete_sysEx(void){
         && midi_sysex_buffer[readIndex++] == MIDI_SYSEX_VERSION
         )
     {
+        cli();
         mute();
         start_volume = midi_sysex_buffer[readIndex++] & 0b1111;
         start_duty_cycle = midi_sysex_buffer[readIndex++] & 0b1111;
         
         for(int i = 0; i < TABLE_SIZE; ++i){
-            table[i] = ((midi_sysex_buffer[readIndex++] & 0b1111) << 4) | (midi_sysex_buffer[readIndex++] & 0b1111);
+            uint8_t hinibble = (midi_sysex_buffer[readIndex++] << 4);
+            uint8_t lonibble = (midi_sysex_buffer[readIndex++] & 0b1111);
+            table[i] = ( hinibble | lonibble );
         }
 
         jump_on_release = midi_sysex_buffer[readIndex++] & 0b1111;
         jump_flag = midi_sysex_buffer[readIndex++] & 0b1111;
 
         arp_mode = (midi_sysex_buffer[readIndex++] & 0b1111) % ARPMODES;
-        arp_speed = midi_sysex_buffer[readIndex++] & 0b1111;
+        arp_speed = midi_sysex_buffer[readIndex++];
+        sei();
         retrigger_flag = midi_sysex_buffer[readIndex++] & 0b1111;
         load_settings_ifPlaying();
     }
 }
 
 static inline void _rx_processMIDIpacket(unsigned char midiCommand, 
-                               unsigned char channel,
+                               unsigned char data0,
                                unsigned char data1,
                                unsigned char data2){
+                                   
+    unsigned char channel = (data0 & MIDI_CHANNEL_MASK);
     if(midiCommand == MIDI_STATUS_NOTEON){
         if(data2){
             _rx_noteOn(channel, data1, data2);
@@ -329,7 +334,7 @@ static inline void _rx_processMIDIpacket(unsigned char midiCommand,
     } else if(midiCommand == MIDI_STATUS_CONTROLCHANGE){
         _rx_controlChange(channel, data1, data2);
     } else if(midiCommand == MIDI_SYSEX_START_OR_CONTINUE || midiCommand == 0x50 || midiCommand == 0x60 || midiCommand == 0x70){
-        _rx_sysEx(channel, data1, data2);
+        _rx_sysEx(data0, data1, data2);
     }
 }
 
