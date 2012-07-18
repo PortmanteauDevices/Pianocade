@@ -70,7 +70,7 @@ static inline void _rx_USB(void){
     MIDI_EventPacket_t ReceivedMIDIEvent;
     while (MIDI_Device_ReceiveEventPacket(&Keyboard_MIDI_Interface, &ReceivedMIDIEvent)){
         // Data bytes should NEVER have bit 7 set
-        if((ReceivedMIDIEvent.Data2 || ReceivedMIDIEvent.Data3) && 0b10000000) continue;
+        if((ReceivedMIDIEvent.Data2 || ReceivedMIDIEvent.Data3) & 0b10000000) continue;
         
         unsigned char midiCommand = (ReceivedMIDIEvent.Command << 4);
 
