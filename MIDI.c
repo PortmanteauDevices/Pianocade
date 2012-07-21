@@ -68,18 +68,18 @@ static inline void _rx_USB(void){
     USB_USBTask();
 
     MIDI_EventPacket_t ReceivedMIDIEvent;
-    while (MIDI_Device_ReceiveEventPacket(&Keyboard_MIDI_Interface, &ReceivedMIDIEvent)){
-        // Data bytes should NEVER have bit 7 set
-        if((ReceivedMIDIEvent.Data2 || ReceivedMIDIEvent.Data3) & 0b10000000) continue;
-        
+    while (MIDI_Device_ReceiveEventPacket(&Keyboard_MIDI_Interface, &ReceivedMIDIEvent)){      
         unsigned char midiCommand = (ReceivedMIDIEvent.Command << 4);
+        
+        // Data bytes should NEVER have bit 7 set
+        if(((ReceivedMIDIEvent.Data2 || ReceivedMIDIEvent.Data3) & 0b10000000)
+            && !(midiCommand == 0x40 || midiCommand == 0x50 || midiCommand == 0x60 || midiCommand == 0x70)) continue;
 
         // For anything other than SysEx messages, the following statement should be true
         // so if it's not, do not process the message
-       /* if((midiCommand != (ReceivedMIDIEvent.Data1 & MIDI_COMMAND_MASK)) 
+       if((midiCommand != (ReceivedMIDIEvent.Data1 & MIDI_COMMAND_MASK)) 
         // and this one covers SysEx messages
-            && (midiCommand != 0x40 || midiCommand != 0x50 || midiCommand != 0x60 || midiCommand != 0x70)) continue;
-*/
+            && !(midiCommand == 0x40 || midiCommand == 0x50 || midiCommand == 0x60 || midiCommand == 0x70)) continue;
         // Immediately process MIDI realtime messages
         if((ReceivedMIDIEvent.Data1 >> 3) == 0b11111){
             switch(ReceivedMIDIEvent.Data1 & 0b111){
