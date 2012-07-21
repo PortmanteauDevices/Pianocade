@@ -388,7 +388,9 @@ int main(void) {
         // If we're on the MIDI clock, advance Arp
         if(midi_clock_flag && midi_tick >= midi_tempo){
             midi_tick %= midi_tempo;
+            cli();
             (*arpeggio[arp_mode])();
+            sei();
             TCCR1B = pgm_read_byte(&prescaler[CURRENT_PITCH]);
         }
 
@@ -693,7 +695,7 @@ static inline void pianocadeSetup(){
     PORTD |= 0b00110001; // High C, coin buttons
 
     TCCR2A = 0b00000010; //CTC mode, all pins detached
-    TCCR2B = 0; // Stopped; when started, will set to clk/256
+    TCCR2B = 0; // Stopped; when started, will set to clk/1024
     OCR2A = 255; // Overflow level
     TIMSK2 = 0b010;
 
@@ -899,6 +901,7 @@ static inline void processNotes(){
                                 arp_count = 0; // ... reset arpeggiation counter (do we actually want this?)
                                 shift = 0;
                                 TCCR1B = pgm_read_byte(&prescaler[CURRENT_PITCH]); // ... change the prescaler value to prevent "ghosting"
+                                new_note();
                             }
                             sei();
                         }
@@ -924,7 +927,7 @@ static inline void processNotes(){
             last_chord_length = chord_length;
         } else { // No notes are pressed, so start the release phase, stop last note, etc
         // ENVELOPE: RELEASE NOTE
-            shift = 0;
+            //shift = 0; // Why was this here?! Seems wrong to interrupt the shift level
             TCCR1B = pgm_read_byte(&prescaler[CURRENT_PITCH]);
             if(jump_flag) table_pos = jump_on_release << 1;
             table_delay = 0;
