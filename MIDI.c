@@ -297,6 +297,13 @@ static inline void _complete_sysEx(void){
         mute();
         start_volume = midi_sysex_buffer[readIndex++] & 0b1111;
         start_duty_cycle = midi_sysex_buffer[readIndex++] & 0b1111;
+
+        jump_flag = midi_sysex_buffer[readIndex++] & 0b1111;        
+        jump_on_release = midi_sysex_buffer[readIndex++] & 0b1111;
+
+        arp_mode = (midi_sysex_buffer[readIndex++] & 0b1111) % ARPMODES;
+        arp_speed = midi_sysex_buffer[readIndex++];
+        retrigger_flag = midi_sysex_buffer[readIndex++] & 0b1111;
         
         for(int i = 0; i < TABLE_SIZE; ++i){
             uint8_t hinibble = (midi_sysex_buffer[readIndex++] << 4);
@@ -304,13 +311,8 @@ static inline void _complete_sysEx(void){
             table[i] = ( hinibble | lonibble );
         }
 
-        jump_on_release = midi_sysex_buffer[readIndex++] & 0b1111;
-        jump_flag = midi_sysex_buffer[readIndex++] & 0b1111;
 
-        arp_mode = (midi_sysex_buffer[readIndex++] & 0b1111) % ARPMODES;
-        arp_speed = midi_sysex_buffer[readIndex++];
         sei();
-        retrigger_flag = midi_sysex_buffer[readIndex++] & 0b1111;
         load_settings_ifPlaying();
     }
 }
