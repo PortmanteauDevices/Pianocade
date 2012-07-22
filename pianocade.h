@@ -55,7 +55,7 @@
     #define NOTES_DEBOUNCE DEBOUNCE
     #define CONTROL_DEBOUNCE DEBOUNCE
     #define HELD_DEBOUNCE DEBOUNCE
-    #define ARPMODES 3
+    #define ARPMODES 4
     #define TABLE_SPEED 24
     #define TABLE_SIZE 32
     #define BANK_SIZE 15
@@ -101,6 +101,7 @@
     */
     void ascending(void);
     void descending(void);
+    void pingpong(void);
     void random_arp(void);
 
     /*

@@ -62,7 +62,7 @@ uint8_t current_envelope = 0;
 uint8_t last_envelope = 0;
 uint8_t muteflag = 0;
 
-void (*arpeggio[ARPMODES])(void) = {&ascending, &descending, &random_arp};
+void (*arpeggio[ARPMODES])(void) = {&ascending, &descending, &random_arp, &pingpong};
 uint8_t arp_mode;
 
 //void (*notegen_a)(void) = &square_a;
@@ -525,7 +525,7 @@ void ascending(){
     } else {
         arp_pos = 0;
     }
-    shift = 0;
+//    shift = 0;
 //    TCCR1B = pgm_read_byte(&prescaler[CURRENT_PITCH]);
     if(midi_arp_output){MIDI_tx_noteOn(CURRENT_NOTE);}
     lastnote = CURRENT_NOTE;
@@ -535,17 +535,42 @@ void ascending(){
 
 void descending(){
     if(midi_arp_output){MIDI_tx_noteOff(lastnote);}
-    shift = 0;
+//    shift = 0;
 //    TCCR1B = pgm_read_byte(&prescaler[CURRENT_PITCH]);
-    if(midi_arp_output){MIDI_tx_noteOn(CURRENT_NOTE);}
-    lastnote = CURRENT_NOTE;
-    arp_count = 0;
     if(arp_pos){
         arp_pos--;
     } else {
         arp_pos = chord_length - 1;
     }
+    if(midi_arp_output){MIDI_tx_noteOn(CURRENT_NOTE);}
+    lastnote = CURRENT_NOTE;
+    arp_count = 0;
     if(retrigger_flag) new_note();
+}
+
+void pingpong(){
+    static direction;
+    if(midi_arp_output){MIDI_tx_noteOff(lastnote);}
+    if(direction){
+        if(arp_pos < chord_length - 1){
+            arp_pos++;
+        } else {
+            direction = false;
+            arp_pos--;
+        }
+    } else {
+        if(arp_pos){
+            arp_pos--;
+        } else {
+            direction = true;
+            arp_pos = 1;
+        }
+    }
+//    shift = 0;
+    if(midi_arp_output){MIDI_tx_noteOn(CURRENT_NOTE);}
+    lastnote = CURRENT_NOTE;
+    arp_count = 0;
+    if(retrigger_flag) new_note();    
 }
 
 void random_arp(){
@@ -553,7 +578,7 @@ void random_arp(){
 
     //TODO: replace rand with something better (that gives a return value between 0 and chord_length-1, exclusive)
     arp_pos = (arp_pos + 1 + (rand() % (chord_length-1))) % chord_length;
-    shift = 0;
+//    shift = 0;
 
 //    TCCR1B = pgm_read_byte(&prescaler[CURRENT_PITCH]);
     if(midi_arp_output){MIDI_tx_noteOn(CURRENT_NOTE);}
