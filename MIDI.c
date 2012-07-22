@@ -295,6 +295,7 @@ static inline void _complete_sysEx(void){
     {
         cli();
         mute();
+        int bank = midi_sysex_buffer[readIndex++];
         start_volume = midi_sysex_buffer[readIndex++] & 0b1111;
         start_duty_cycle = midi_sysex_buffer[readIndex++] & 0b1111;
 
@@ -314,6 +315,7 @@ static inline void _complete_sysEx(void){
 
         sei();
         load_settings_ifPlaying();
+        if(bank) save_settings(bank - 1);
     }
 }
 

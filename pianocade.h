@@ -11,6 +11,7 @@
     #include <avr/interrupt.h>
     #include <stdlib.h>
     #include <string.h>
+    #include <avr/eeprom.h>
 
     extern USB_ClassInfo_MIDI_Device_t Keyboard_MIDI_Interface;
 
@@ -57,6 +58,7 @@
     #define ARPMODES 3
     #define TABLE_SPEED 24
     #define TABLE_SIZE 32
+    #define BANK_SIZE 15
 
     /* External variables */
     extern uint16_t midi_notes[OCTAVE_TOTAL];

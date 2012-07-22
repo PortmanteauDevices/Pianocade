@@ -81,12 +81,12 @@ uint8_t retrigger_flag;
 
 uint8_t pinreadbuffer;
 
-const uint8_t PROGMEM banked_start_volume[15] = {0xFF, 0xF, 0x0, 0xF, 0xB, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0x3};
-const uint8_t PROGMEM banked_arp_mode[15] = {0, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
-const uint8_t PROGMEM banked_arp_speed[15] = {12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 120, 120, 120, 120, 120};
-const uint8_t PROGMEM banked_retrigger_flag[15] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1};
-const uint8_t PROGMEM banked_start_duty_cycle[15] = {1, 2, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-const uint8_t PROGMEM banked_table[15][TABLE_SIZE] = {
+const uint8_t EEMEM banked_start_volume[BANK_SIZE] = {0xFF, 0xF, 0x0, 0xF, 0xB, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0x3};
+const uint8_t EEMEM banked_arp_mode[BANK_SIZE] = {0, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
+const uint8_t EEMEM banked_arp_speed[BANK_SIZE] = {12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 120, 120, 120, 120, 120};
+const uint8_t EEMEM banked_retrigger_flag[BANK_SIZE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1};
+const uint8_t EEMEM banked_start_duty_cycle[BANK_SIZE] = {1, 2, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+const uint8_t EEMEM banked_table[BANK_SIZE][TABLE_SIZE] = {
   {  // BANK 0, 50% square
     0x70, 0, // 0
     0, 0, // 1
@@ -359,8 +359,8 @@ const uint8_t PROGMEM banked_table[15][TABLE_SIZE] = {
     0x30, 0, // F
   }
 };
-const uint8_t PROGMEM banked_jump_flag[15] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1};
-const uint8_t PROGMEM banked_jump_on_release[15] = {0xF, 0xF, 0x2, 0xF, 0xE, 0xF, 0x1, 0x0, 0xF, 0x1, 0xF, 0xF, 0xF, 0xF, 0xF};
+const uint8_t EEMEM banked_jump_flag[BANK_SIZE] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1};
+const uint8_t EEMEM banked_jump_on_release[BANK_SIZE] = {0xF, 0xF, 0x2, 0xF, 0xE, 0xF, 0x1, 0x0, 0xF, 0x1, 0xF, 0xF, 0xF, 0xF, 0xF};
 
 uint8_t table_localdata[16] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 uint8_t table_nextflag;
@@ -648,23 +648,44 @@ void setvolumevelocity(uint8_t unused){
 // END TABLE METHODS
 
 void load_settings(uint8_t bank){
-    mute();
-    start_volume = pgm_read_byte(&(banked_start_volume[bank]));
-    start_duty_cycle = pgm_read_byte(&(banked_start_duty_cycle[bank]));
-    memcpy_P(table, &(banked_table[bank]), TABLE_SIZE);
+    if(bank < BANK_SIZE){
+        mute();
+        start_volume = eeprom_read_byte(&(banked_start_volume[bank]));
+        start_duty_cycle = eeprom_read_byte(&(banked_start_duty_cycle[bank]));
+        
+        eeprom_read_block((void*)&table, (const void*)&(banked_table[bank]), TABLE_SIZE);
 
-    jump_on_release = pgm_read_byte(&(banked_jump_on_release[bank]));
-    jump_flag = pgm_read_byte(&(banked_jump_flag[bank]));
+        jump_on_release = eeprom_read_byte(&(banked_jump_on_release[bank]));
+        jump_flag = eeprom_read_byte(&(banked_jump_flag[bank]));
 
-    arp_mode = pgm_read_byte(&(banked_arp_mode[bank])) % ARPMODES;
-    arp_speed = pgm_read_byte(&(banked_arp_speed[bank]));
-    retrigger_flag = pgm_read_byte(&(banked_retrigger_flag[bank]));
-    load_settings_ifPlaying();
+        arp_mode = eeprom_read_byte(&(banked_arp_mode[bank])) % ARPMODES;
+        arp_speed = eeprom_read_byte(&(banked_arp_speed[bank]));
+        retrigger_flag = eeprom_read_byte(&(banked_retrigger_flag[bank]));
+        load_settings_ifPlaying();
+    }
 }
 
 void load_settings_ifPlaying(void){
     if(chord_length == 1) TCCR1B = pgm_read_byte(&prescaler[CURRENT_PITCH]);
     if(notes_pressed || held_hasnotes || midi_hasnotes) new_note();
+}
+
+void save_settings(uint8_t bank){
+    if(bank < BANK_SIZE){
+        cli();
+        eeprom_update_byte(&(banked_start_volume[bank]), start_volume);
+        eeprom_update_byte(&(banked_start_duty_cycle[bank]), start_duty_cycle);
+        
+        eeprom_update_block((const void*)&table, (void*)&(banked_table[bank]), TABLE_SIZE);
+        
+        eeprom_update_byte(&(banked_jump_on_release[bank]), jump_on_release);
+        eeprom_update_byte(&(banked_jump_flag[bank]), jump_flag);
+        
+        eeprom_update_byte(&(banked_arp_mode[bank]), arp_mode);
+        eeprom_update_byte(&(banked_arp_speed[bank]), arp_speed);
+        eeprom_update_byte(&(banked_retrigger_flag[bank]), retrigger_flag);
+        sei();
+    }
 }
 
 void new_note(){
