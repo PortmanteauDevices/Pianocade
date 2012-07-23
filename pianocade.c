@@ -32,7 +32,7 @@ uint8_t octave = 4;
 uint8_t transpose = 0;
 
 uint8_t arp_count = 0;
-volatile uint8_t arp_speed = 12;
+volatile uint8_t arp_speed = MAX_ARP_SPEED;
 volatile uint8_t arp_pos = 0;
 
 int8_t bend_step = 0;
@@ -83,9 +83,11 @@ uint8_t retrigger_flag;
 
 uint8_t pinreadbuffer;
 
+uint8_t altFunction_flag;
+
 const uint8_t EEMEM banked_start_volume[BANK_SIZE] = {0xFF, 0xF, 0x0, 0xF, 0xB, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0x3};
-const uint8_t EEMEM banked_arp_mode[BANK_SIZE] = {0, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
-const uint8_t EEMEM banked_arp_speed[BANK_SIZE] = {12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 120, 120, 120, 120, 120};
+const uint8_t EEMEM banked_arp_mode[BANK_SIZE] = {3, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
+const uint8_t EEMEM banked_arp_speed[BANK_SIZE] = {22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 120, 120, 120, 120, 120};
 const uint8_t EEMEM banked_retrigger_flag[BANK_SIZE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1};
 const uint8_t EEMEM banked_start_duty_cycle[BANK_SIZE] = {1, 2, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 const uint8_t EEMEM banked_table[BANK_SIZE][TABLE_SIZE] = {
@@ -401,7 +403,7 @@ int main(void) {
 
         // BEGIN ANALOGUE SETTINGS
         // This section is for future expansion, allowing analogue adjustment of arp_speed
-        OCR2A = arp_speed + 10;
+        OCR2A =  arp_speed < MAX_ARP_SPEED ? MAX_ARP_SPEED : arp_speed;
         // END ANALOGUE SETTINGS
 
         // READ ALL NOTES AND CONTROLS
@@ -584,6 +586,22 @@ void random_arp(){
     lastnote = current_note;
     arp_count = 0;
     if(retrigger_flag) new_note();
+}
+
+static inline void arp_speed_increase(){
+    if(arp_speed > MAX_ARP_SPEED) --arp_speed;
+}
+
+static inline void arp_speed_decrease(){
+    if(arp_speed < 255) ++arp_speed;
+}
+
+static inline void arp_speed_double(){
+    if(arp_speed/2 > MAX_ARP_SPEED) arp_speed /= 2;
+}
+
+static inline void arp_speed_half(){
+    if(2*arp_speed < 255) arp_speed *= 2;
 }
 // END ARPEGGIO METHODS
 
@@ -831,55 +849,76 @@ static inline void clearHold(){
 
 static inline void processControls(){
     if((last_control != control) && (debounce_control_count > CONTROL_DEBOUNCE)){
-        last_control = control;
-
-        if(control & 0b00100000) {
-            if(octave > OCTAVE_MIN) {
-                onOctaveChange();
-                octave--;
+        if(altFunction_flag){
+            if(control & 0b00100000) {
+                arp_speed_half();
             }
-        }
-        if(control & 0b01000000) {
-            if(octave < OCTAVE_MAX) {
-                onOctaveChange();
-                octave++;
+            if(control & 0b01000000) {
+                arp_speed_double();
             }
-        }
-        autobend = &autobend_return;
-        if(control & 0b00010000) {
-            autobend = &autobend_up;
+            autobend = &autobend_return;
+            if(control & 0b00010000) {
+                arp_speed_increase();
+            }
+            if(control & 0b10000000) {
+                arp_speed_decrease();
+            }
+            if(control & 0b00001000) {
+                arp_mode = (arp_mode + 1) % ARPMODES;
+            }
+        } else { // Primary function
+            if(control & 0b00100000) {
+                if(octave > OCTAVE_MIN) {
+                    onOctaveChange();
+                    octave--;
+                }
+            }
+            if(control & 0b01000000) {
+                if(octave < OCTAVE_MAX) {
+                    onOctaveChange();
+                    octave++;
+                }
+            }
+            autobend = &autobend_return;
+            if(control & 0b00010000) {
+                autobend = &autobend_up;
             //arp_mode = (arp_mode + 1) % ARPMODES;
             //if(duty_cycle > 1) duty_cycle--;
-        }
-        if(control & 0b10000000) {
-            autobend = &autobend_down;
+            }
+            if(control & 0b10000000) {
+                autobend = &autobend_down;
             //arp_mode = (arp_mode + ARPMODES - 1) % ARPMODES;
             //if(duty_cycle < 3) duty_cycle++;
+            }
+            if (control & 0b00001111) {
+                last_envelope |= (control & 0b1111);
+                current_envelope = last_envelope - 1;
+                load_settings(current_envelope);
+            } else {
+                last_envelope = 0;
+            }
         }
-        if (control & 0b00001111) {
-            last_envelope |= (control & 0b1111);
-            current_envelope = last_envelope - 1;
-            load_settings(current_envelope);
-        } else {
-            last_envelope = 0;
-        }
+
+        last_control = control;
     }
 }
 
 static inline void processCoins(){
     if((last_coin != coin) && (debounce_coin_count > CONTROL_DEBOUNCE)){
-        last_coin = coin;
-
-        if(coin & 0b00100000) {
-            clearHold();
-        }
+        altFunction_flag = (coin & 0b00100000);
         
         if(coin & 0b00010000) {
-            held_state = 1;
-            processHold();
-        } else {
+            if(altFunction_flag){
+                clearHold();
+            } else {
+                held_state = 1;
+                processHold();
+            }
+        } else if (last_coin & 0b00010000){
             held_state = 0;
         }
+        
+        last_coin = coin;
     }
 }
 

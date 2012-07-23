@@ -58,7 +58,8 @@
     #define TABLE_SPEED 24
     #define TABLE_SIZE 32
     #define BANK_SIZE 15
-
+    #define MAX_ARP_SPEED 22
+    
     /* External variables */
     extern uint16_t midi_notes[OCTAVE_TOTAL];
     extern uint8_t midi_changed;
@@ -102,7 +103,12 @@
     void descending(void);
     void pingpong(void);
     void random_arp(void);
-
+    
+    static inline void arp_speed_increase(void);
+    static inline void arp_speed_decrease(void);
+    static inline void arp_speed_double(void);
+    static inline void arp_speed_double(void);
+    
     /*
     * TABLE METHODS
     */
