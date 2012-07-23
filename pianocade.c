@@ -931,11 +931,11 @@ static inline void processNotes(){
             for(int octave_count = 0; octave_count < OCTAVE_TOTAL; ++octave_count){
                 if(all_notes[octave_count]){
                     for(int key_count = 0; key_count < 12; ++key_count){
-                        if( (all_notes[octave_count] >> key_count) & 1 ){
+                        if( (all_notes[octave_count] >> key_count) & 1 ){ // If it's pressed...
                             cli();
                             chord[chord_length++] = key_count + 12*octave_count;
 
-                            // If it is newly pressed...
+                            // If it's newly pressed...
                             if( !((last_all_notes[octave_count] >> key_count) & 1) ){
                                 if(midi_arp_output && note_is_playing){MIDI_tx_noteOff(lastnote);} // ... turn the last note off
                                 arp_pos = chord_length-1; // ... adjust arpeggiation index to current note
