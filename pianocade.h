@@ -54,7 +54,7 @@
     #define NOTES_DEBOUNCE DEBOUNCE
     #define CONTROL_DEBOUNCE DEBOUNCE
     #define HELD_DEBOUNCE DEBOUNCE
-    #define ARPMODES 4
+    #define ARPMODES 5
     #define TABLE_SPEED 24
     #define TABLE_SIZE 32
     #define BANK_SIZE 15
@@ -103,11 +103,12 @@
     void descending(void);
     void pingpong(void);
     void random_arp(void);
+    void order_pressed(void);
     
     static inline void arp_speed_increase(void);
     static inline void arp_speed_decrease(void);
     static inline void arp_speed_double(void);
-    static inline void arp_speed_double(void);
+    static inline void arp_speed_half(void);
     
     /*
     * TABLE METHODS
@@ -134,11 +135,20 @@
     void load_settings_ifPlaying(void);
     void new_note(void);
     
+    /*
+    * LIST METHODS
+    */
+    static inline void list_initialize(void);
+    int8_t list_add(uint8_t data);
+    void list_remove(int8_t node);
+    void list_find_and_remove(uint8_t data);
+    
     static inline void pianocadeSetup(void);
     static inline void initializeTranspose(void);
     static inline void readPins(void);
     static inline void debouncePins(void);
     static inline void processHold(void);
+    static inline void clearHold(void);
     static inline void processControls(void);
     static inline void processCoins(void);
     static inline void processNotes(void);

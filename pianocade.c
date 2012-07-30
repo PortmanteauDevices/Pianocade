@@ -64,11 +64,19 @@ uint8_t current_envelope = 0;
 uint8_t last_envelope = 0;
 uint8_t muteflag = 0;
 
-void (*arpeggio[ARPMODES])(void) = {&ascending, &descending, &random_arp, &pingpong};
+void (*arpeggio[ARPMODES])(void) = {&ascending, &descending, &pingpong, &random_arp, &order_pressed};
 uint8_t arp_mode;
 
 //void (*notegen_a)(void) = &square_a;
 //void (*notegen_b)(void) = &square_b;
+
+uint8_t list_data[MAXCHORD];
+int8_t list_next[MAXCHORD];
+int8_t list_prev[MAXCHORD];
+int8_t list_start;
+int8_t list_end;
+int8_t list_free;
+volatile int8_t list_current;
 
 uint8_t table_delay = 0;
 uint8_t table_timer = 0;
@@ -86,8 +94,8 @@ uint8_t pinreadbuffer;
 uint8_t altFunction_flag;
 
 const uint8_t EEMEM banked_start_volume[BANK_SIZE] = {0xFF, 0xF, 0x0, 0xF, 0xB, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0xF, 0x3};
-const uint8_t EEMEM banked_arp_mode[BANK_SIZE] = {3, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
-const uint8_t EEMEM banked_arp_speed[BANK_SIZE] = {22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 120, 120, 120, 120, 120};
+const uint8_t EEMEM banked_arp_mode[BANK_SIZE] = {4, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
+const uint8_t EEMEM banked_arp_speed[BANK_SIZE] = {32, 22, 22, 22, 22, 22, 22, 22, 22, 22, 120, 120, 120, 120, 120};
 const uint8_t EEMEM banked_retrigger_flag[BANK_SIZE] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1};
 const uint8_t EEMEM banked_start_duty_cycle[BANK_SIZE] = {1, 2, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 const uint8_t EEMEM banked_table[BANK_SIZE][TABLE_SIZE] = {
@@ -551,7 +559,7 @@ void descending(){
 }
 
 void pingpong(){
-    static direction;
+    static int direction;
     if(midi_arp_output){MIDI_tx_noteOff(lastnote);}
     if(direction){
         if(arp_pos < chord_length - 1){
@@ -582,6 +590,20 @@ void random_arp(){
     arp_pos = (arp_pos + 1 + (rand() % (chord_length-1))) % chord_length;
 
     current_note = chord[arp_pos];
+    if(midi_arp_output){MIDI_tx_noteOn(current_note);}
+    lastnote = current_note;
+    arp_count = 0;
+    if(retrigger_flag) new_note();
+}
+
+void order_pressed(){
+    if(midi_arp_output){MIDI_tx_noteOff(lastnote);}
+    if(list_next[list_current] == -1){
+        list_current = list_start;
+    } else {
+        list_current = list_next[list_current];
+    }
+    current_note = list_data[list_current];
     if(midi_arp_output){MIDI_tx_noteOn(current_note);}
     lastnote = current_note;
     arp_count = 0;
@@ -743,6 +765,7 @@ void new_note(){
 
 static inline void pianocadeSetup(){
     MIDI_init();
+    list_initialize();
 
     (CLKPR = 0x80, CLKPR = (0)); // Set clock to 16MHz (for TEENSY BOARD)
 
@@ -967,7 +990,7 @@ static inline void processNotes(){
 
         if( (notes_pressed && midi_local_control) || held_hasnotes || midi_hasnotes){ // Checks if any notes are pressed
             for(int octave_count = 0; octave_count < OCTAVE_TOTAL; ++octave_count){
-                if(all_notes[octave_count]){
+                if(all_notes[octave_count] || last_all_notes[octave_count]){
                     for(int key_count = 0; key_count < 12; ++key_count){
                         if( (all_notes[octave_count] >> key_count) & 1 ){ // If it's pressed...
                             cli();
@@ -978,6 +1001,7 @@ static inline void processNotes(){
                                 if(midi_arp_output && note_is_playing){MIDI_tx_noteOff(lastnote);} // ... turn the last note off
                                 arp_pos = chord_length-1; // ... adjust arpeggiation index to current note
                                 current_note = chord[arp_pos];
+                                list_current = list_add(current_note);
                                 if(midi_arp_output){
                                     MIDI_tx_noteOn(current_note); // .. turn the current note on
                                     note_is_playing = 1;
@@ -988,6 +1012,11 @@ static inline void processNotes(){
                                 new_note();
                             }
                             sei();
+                        } else { // If it's not pressed...
+                            if( ((last_all_notes[octave_count] >> key_count) & 1) ){ // ... but was before
+                                list_find_and_remove(key_count + 12*octave_count);
+                                list_current = list_start;
+                            }
                         }
                     }
                 }
@@ -1018,10 +1047,67 @@ static inline void processNotes(){
             TCCR2B = 0;
             last_chord_length = 0;
             note_is_playing = 0;
+            list_initialize();
         }
         last_notes_pressed = notes_pressed;
         memcpy(last_all_notes, all_notes, 2*OCTAVE_TOTAL);
         midi_changed = 0;
         held_changed = 0;
+    }
+}
+
+static inline void list_initialize(){
+    list_start = -1;
+    list_end = -1;
+    list_free = 0;
+    for(int i = 0; i < MAXCHORD; ++i){
+        list_next[i] = i + 1;
+        list_prev[i] = i - 1;
+    }
+    list_next[MAXCHORD] = -1;
+}
+
+int8_t list_add(uint8_t data){
+    int new_node = list_free;
+    list_free = list_next[list_free];
+    list_prev[list_free] = -1;
+    
+    if(list_start == -1) list_start = new_node;
+    list_data[new_node] = data;
+    list_next[new_node] = -1;
+    list_prev[new_node] = list_end;
+    if(list_end != -1) list_next[list_end] = new_node;
+    list_end = new_node;
+    return new_node;
+}
+
+void list_remove(int8_t node){
+    cli();
+    if(list_start == node){
+        list_start = list_next[node];
+    } else {
+        list_next[list_prev[node]] = list_next[node];
+    }
+    
+    if(list_end == node){
+        list_end = list_prev[node];
+    } else {
+        list_prev[list_next[node]] = list_prev[node];
+    }
+    
+    list_prev[node] = -1;
+    list_next[node] = list_free;
+    list_free = node;
+    sei();
+}
+
+void list_find_and_remove(uint8_t data){
+    int8_t current_node = list_start;
+    while(current_node != -1){
+        if(list_data[current_node] == data){
+            list_remove(current_node);
+            break;
+        }
+        current_node = list_next[current_node];
     }
 }
