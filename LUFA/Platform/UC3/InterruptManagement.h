@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -35,14 +35,14 @@
  *  handlers within the device.
  */
 
-/** \ingroup Group_PlatformDrivers
- *  \defgroup Group_PlatformDrivers_UC3Interrupts UC3 Interrupt Controller Driver - LUFA/Platform/UC3/InterruptManagement.h
+/** \ingroup Group_PlatformDrivers_UC3
+ *  \defgroup Group_PlatformDrivers_UC3Interrupts Interrupt Controller Driver - LUFA/Platform/UC3/InterruptManagement.h
  *  \brief Interrupt Controller Driver for the AVR32 UC3 microcontrollers.
  *
  *  \section Sec_Dependencies Module Source Dependencies
  *  The following files must be built with any user project that uses this module:
- *    - LUFA/Platform/UC3/InterruptManagement.c
- *    - LUFA/Platform/UC3/Exception.S
+ *    - LUFA/Platform/UC3/InterruptManagement.c <i>(Makefile source module name: LUFA_SRC_PLATFORM)</i>
+ *    - LUFA/Platform/UC3/Exception.S <i>(Makefile source module name: LUFA_SRC_PLATFORM)</i>
  *
  *  \section Sec_ModDescription Module Description
  *  Interrupt controller driver for the AVR32 UC3 microcontrollers, for the configuration of interrupt
@@ -51,12 +51,12 @@
  *  Usage Example:
  *  \code
  *		#include <LUFA/Platform/UC3/InterruptManagement.h>
- *
+ *      
  *		ISR(USB_Group_IRQ_Handler)
  *		{
  *			// USB group handler code here
  *		}
- *
+ *      
  *		void main(void)
  *		{
  *			INTC_Init();
@@ -71,7 +71,7 @@
 #define _UC3_INTERRUPT_MANAGEMENT_H_
 
 	/* Includes: */
-		#include <LUFA/Common/Common.h>
+		#include "../../Common/Common.h"
 
 	/* Enable C linkage for C++ Compilers: */
 		#if defined(__cplusplus)
@@ -84,14 +84,16 @@
 			typedef void (*InterruptHandlerPtr_t)(void);
 
 		/* External Variables: */
-			extern const void            EVBA_Table;
-			extern const uint32_t        Autovector_Table[];
+			#if defined(__INCLUDE_FROM_INTMANAGEMENT_C)
+				extern const void        EVBA_Table;
+			#endif
 			extern InterruptHandlerPtr_t InterruptHandlers[AVR32_INTC_NUM_INT_GRPS];
+			extern const uint32_t        Autovector_Table[];
 	#endif
 
 	/* Public Interface - May be used in end-application: */
 		/* Macros: */
-			/** Converts a given interrupt index into its assocated interrupt group.
+			/** Converts a given interrupt index into its associated interrupt group.
 			 *
 			 *  \param[in] IRQIndex  Index of the interrupt request to convert.
 			 *
@@ -99,7 +101,7 @@
 			 */
 			#define INTC_IRQ_GROUP(IRQIndex)  (IRQIndex / 32)
 
-			/** Converts a given interrupt index into its assocated interrupt line.
+			/** Converts a given interrupt index into its associated interrupt line.
 			 *
 			 *  \param[in] IRQIndex  Index of the interrupt request to convert.
 			 *
@@ -108,10 +110,8 @@
 			#define INTC_IRQ_LINE(IRQIndex)   (IRQIndex % 32)
 
 		/* Function Prototypes: */
-			/** Initializes the interrupt controller, nulling out all interrupt handlers ready for new registration. This
-			 *  function should be called once on startup to ensure the interrupt controller is ready for use.
-			 */
-			void INTC_Init(void);
+			void INTC_Init(void);			
+			InterruptHandlerPtr_t INTC_GetInterruptHandler(const uint_reg_t InterruptLevel);
 
 		/* Inline Functions: */
 			/** Registers a handler for a given interrupt group. On the AVR32 UC3 devices, interrupts are grouped by
@@ -137,7 +137,7 @@
 				InterruptHandlers[GroupNumber] = Handler;
 				AVR32_INTC.ipr[GroupNumber]    = Autovector_Table[InterruptLevel];
 			}
-			
+
 			/** Retrieves the pending interrupts for a given interrupt group. The result of this function should be masked
 			 *  against interrupt request indexes converted to a request line number via the \ref INTC_IRQ_LINE() macro. To
 			 *  obtain the group number of a given interrupt request, use the \ref INTC_IRQ_GROUP() macro.
@@ -151,7 +151,7 @@
 			{
 				return AVR32_INTC.irr[GroupNumber];
 			}
-	
+
 	/* Disable C linkage for C++ Compilers: */
 		#if defined(__cplusplus)
 			}
@@ -160,3 +160,4 @@
 #endif
 
 /** @} */
+

@@ -469,22 +469,22 @@ static inline void square_a(){
     OCR1A = pgm_read_word(&note_freq[CURRENT_PITCH]) + (autobend_step + bend_step + midi_bend_step)*pgm_read_byte(&bend_depth[CURRENT_PITCH]);
     OCR1B = (OCR1A >> duty_cycle) ;
     TCNT1 = 0;
-    PORT_DAC = muteflag ? 0 : volume;
+    PORT_DAC = (muteflag ? 0 : volume) | 0b11110000;
 }
 
 static inline void square_b(){
-    PORT_DAC = 0b0;
+    PORT_DAC = 0b11110000;
 }
 
 void wave_a(){
     OCR1A = pgm_read_word(&note_freq[CURRENT_PITCH]) + (autobend_step + bend_step + midi_bend_step)*pgm_read_byte(&bend_depth[CURRENT_PITCH]);
     OCR1B = (OCR1A >> 1) ;
     TCNT1 = 0;
-    PORT_DAC = volume ? pgm_read_byte(&saw_table[++wave_counter & 0b11111]) : 0;
+    PORT_DAC = (volume ? pgm_read_byte(&saw_table[++wave_counter & 0b11111]) : 0) | 0b11110000;
 }
 
 void wave_b(){
-    PORT_DAC = volume ? pgm_read_byte(&saw_table[++wave_counter & 0b11111]) : 0;
+    PORT_DAC = (volume ? pgm_read_byte(&saw_table[++wave_counter & 0b11111]) : 0) | 0b11110000;
 }
 // END NOTE GENERATION METHODS
 
@@ -771,14 +771,16 @@ static inline void pianocadeSetup(){
 
     // Set DDR pins to output
     DDR_DAC = 0b1111;
-    DDRD = 0b11000000; // coin lights
 
     // Internal pull-ups
-    PORT_CONTROL |= 0b11111111; // controls
+    PORT_JOY |= 0b11110000; // controls
+    PORT_PLAYERS |= 0b11110000;
+    PORT_COIN |= 0b00000011;
+    
     PORT_NOTES0 |= 0b11111111; // Notes C0-G0
     PORT_NOTES1 |= 0b11111111; // Notes G#0-D#1
     PORT_NOTES2 |= 0b11111111; // Notes E1-B1
-    PORTD |= 0b00110001; // High C, coin buttons
+    PORT_HINOTE |= 0b00000001; // Note C2
 
     TCCR2A = 0b00000010; //CTC mode, all pins detached
     TCCR2B = 0; // Stopped; when started, will set to clk/1024
@@ -815,8 +817,12 @@ static inline void initializeTranspose(){
 }
 
 static inline void readPins(){
-    control = (~PIN_CONTROL);
-    coin = (~PIND);
+    uint8_t joy = (~PIN_JOY);
+    uint8_t players = (~PIN_PLAYERS);
+    control = (joy & 0b11110000) | (players >> 4);
+    coin = (~PIN_COIN);
+    coin &= 0b11;
+    uint8_t hinote = (~PIN_HINOTE);
 
     pinreadbuffer = (~PIN_NOTES0);
     notes_pressed = pinreadbuffer;
@@ -827,7 +833,7 @@ static inline void readPins(){
     pinreadbuffer = (~PIN_NOTES2);
     notes_pressed |= ((uint32_t)pinreadbuffer << 16);
     
-    pinreadbuffer = coin;
+    pinreadbuffer = hinote;
     if(pinreadbuffer & 1) notes_pressed |= ((uint32_t)1 << 24);
 }
 
@@ -873,42 +879,42 @@ static inline void clearHold(){
 static inline void processControls(){
     if((last_control != control) && (debounce_control_count > CONTROL_DEBOUNCE)){
         if(altFunction_flag){
-            if(control & 0b00100000) {
+            if(control & JOY_LEFT) {
                 arp_speed_half();
             }
-            if(control & 0b01000000) {
+            if(control & JOY_RIGHT) {
                 arp_speed_double();
             }
             autobend = &autobend_return;
-            if(control & 0b00010000) {
+            if(control & JOY_UP) {
                 arp_speed_increase();
             }
-            if(control & 0b10000000) {
+            if(control & JOY_DOWN) {
                 arp_speed_decrease();
             }
             if(control & 0b00001000) {
                 arp_mode = (arp_mode + 1) % ARPMODES;
             }
         } else { // Primary function
-            if(control & 0b00100000) {
+            if(control & JOY_LEFT) {
                 if(octave > OCTAVE_MIN) {
                     onOctaveChange();
                     octave--;
                 }
             }
-            if(control & 0b01000000) {
+            if(control & JOY_RIGHT) {
                 if(octave < OCTAVE_MAX) {
                     onOctaveChange();
                     octave++;
                 }
             }
             autobend = &autobend_return;
-            if(control & 0b00010000) {
+            if(control & JOY_UP) {
                 autobend = &autobend_up;
             //arp_mode = (arp_mode + 1) % ARPMODES;
             //if(duty_cycle > 1) duty_cycle--;
             }
-            if(control & 0b10000000) {
+            if(control & JOY_DOWN) {
                 autobend = &autobend_down;
             //arp_mode = (arp_mode + ARPMODES - 1) % ARPMODES;
             //if(duty_cycle < 3) duty_cycle++;
@@ -928,16 +934,16 @@ static inline void processControls(){
 
 static inline void processCoins(){
     if((last_coin != coin) && (debounce_coin_count > CONTROL_DEBOUNCE)){
-        altFunction_flag = (coin & 0b00100000);
+        altFunction_flag = (coin & COIN_LEFT);
         
-        if(coin & 0b00010000) {
+        if(coin & COIN_RIGHT) {
             if(altFunction_flag){
                 clearHold();
             } else {
                 held_state = 1;
                 processHold();
             }
-        } else if (last_coin & 0b00010000){
+        } else if (last_coin & COIN_RIGHT){
             held_state = 0;
         }
         
@@ -1064,7 +1070,7 @@ static inline void list_initialize(){
         list_next[i] = i + 1;
         list_prev[i] = i - 1;
     }
-    list_next[MAXCHORD] = -1;
+    list_next[MAXCHORD-1] = -1;
 }
 
 int8_t list_add(uint8_t data){

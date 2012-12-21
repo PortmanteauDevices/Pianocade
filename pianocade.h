@@ -19,22 +19,34 @@
     #define PORT_DAC PORTA
     #define DDR_DAC DDRA
 
-    #define PORT_NOTES0 PORTE
-    #define DDR_NOTES0 DDRE
-    #define PIN_NOTES0 PINE
+    #define PORT_NOTES0 PORTB
+    #define DDR_NOTES0 DDRB
+    #define PIN_NOTES0 PINB
 
-    #define PORT_NOTES1 PORTC
-    #define DDR_NOTES1 DDRC
-    #define PIN_NOTES1 PINC
+    #define PORT_NOTES1 PORTE
+    #define DDR_NOTES1 DDRE
+    #define PIN_NOTES1 PINE
 
-    #define PORT_NOTES2 PORTB
-    #define DDR_NOTES2 DDRB
-    #define PIN_NOTES2 PINB
+    #define PORT_NOTES2 PORTC
+    #define DDR_NOTES2 DDRC
+    #define PIN_NOTES2 PINC
+    
+    // NOTE: to use PORTF, JTAG interface must be disabled
+    #define PORT_HINOTE PORTF
+    #define DDR_HINOTE DDRF
+    #define PIN_HINOTE PINF
 
-    // NOTE: to use PORTF, JTAF interface must be disabled
-    #define PORT_CONTROL PORTF
-    #define DDR_CONTROL DDRF
-    #define PIN_CONTROL PINF
+    #define PORT_PLAYERS PORTA
+    #define DDR_PLAYERS DDRA
+    #define PIN_PLAYERS PINA
+    
+    #define PORT_JOY PORTD
+    #define DDR_JOY DDRD
+    #define PIN_JOY PIND
+    
+    #define PORT_COIN PORTD
+    #define DDR_COIN DDRD
+    #define PIN_COIN PIND
     
     // Set max to 8 for 24 keys, 9 for 12 keys
     #define OCTAVE_MAX 8
@@ -59,6 +71,14 @@
     #define TABLE_SIZE 32
     #define BANK_SIZE 15
     #define MAX_ARP_SPEED 22
+    
+    /* Control masks */
+    #define JOY_UP     0b00010000
+    #define JOY_DOWN   0b01000000
+    #define JOY_LEFT   0b00100000
+    #define JOY_RIGHT  0b10000000
+    #define COIN_LEFT  0b00000001
+    #define COIN_RIGHT 0b00000010
     
     /* External variables */
     extern uint16_t midi_notes[OCTAVE_TOTAL];
@@ -133,6 +153,7 @@
     */
     void load_settings(uint8_t bank);
     void load_settings_ifPlaying(void);
+    void save_settings(uint8_t bank);
     void new_note(void);
     
     /*

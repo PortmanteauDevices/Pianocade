@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -27,6 +27,9 @@
   arising out of or in connection with the use or performance of
   this software.
 */
+
+#include "../../../../Common/Common.h"
+#if (ARCH == ARCH_AVR8)
 
 #define  __INCLUDE_FROM_USB_DRIVER
 #define  __INCLUDE_FROM_USB_CONTROLLER_C
@@ -68,7 +71,7 @@ void USB_Init(
 	if (!(USB_Options & USB_OPT_MANUAL_PLL))
 	{
 		#if defined(USB_SERIES_4_AVR)
-		PLLFRQ = ((1 << PLLUSB) | (1 << PDIV3) | (1 << PDIV1));
+		PLLFRQ = (1 << PDIV2);
 		#endif
 	}
 
@@ -162,7 +165,7 @@ void USB_ResetInterface(void)
 		{
 			#if defined(USB_CAN_BE_HOST)
 			USB_PLL_On();
-			while (!(USB_PLL_IsReady()));		
+			while (!(USB_PLL_IsReady()));
 			#endif
 		}
 
@@ -191,7 +194,7 @@ static void USB_Init_Device(void)
 
 	#if !defined(FIXED_CONTROL_ENDPOINT_SIZE)
 	USB_Descriptor_Device_t* DeviceDescriptorPtr;
-	
+
 	#if defined(ARCH_HAS_MULTI_ADDRESS_SPACE) && \
 	    !(defined(USE_FLASH_DESCRIPTORS) || defined(USE_EEPROM_DESCRIPTORS) || defined(USE_RAM_DESCRIPTORS))
 	uint8_t DescriptorAddressSpace;
@@ -215,7 +218,7 @@ static void USB_Init_Device(void)
 		#else
 		USB_Device_ControlEndpointSize = pgm_read_byte(&DeviceDescriptorPtr->Endpoint0Size);
 		#endif
-	}	
+	}
 	#endif
 	#endif
 
@@ -229,8 +232,7 @@ static void USB_Init_Device(void)
 	#endif
 
 	Endpoint_ConfigureEndpoint(ENDPOINT_CONTROLEP, EP_TYPE_CONTROL,
-							   ENDPOINT_DIR_OUT, USB_Device_ControlEndpointSize,
-							   ENDPOINT_BANK_SINGLE);
+							   USB_Device_ControlEndpointSize, 1);
 
 	USB_INT_Clear(USB_INT_SUSPI);
 	USB_INT_Enable(USB_INT_SUSPI);
@@ -255,8 +257,9 @@ static void USB_Init_Host(void)
 
 	USB_INT_Enable(USB_INT_SRPI);
 	USB_INT_Enable(USB_INT_BCERRI);
-	
+
 	USB_Attach();
 }
 #endif
 
+#endif

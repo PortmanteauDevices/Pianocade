@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
               
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this 
   software and its documentation for any purpose is hereby granted
@@ -27,6 +27,9 @@
   arising out of or in connection with the use or performance of
   this software.
 */
+
+#include "../../../../Common/Common.h"
+#if (ARCH == ARCH_UC3)
 
 #define  __INCLUDE_FROM_USB_DRIVER
 #include "../USBMode.h"
@@ -226,5 +229,7 @@ uint8_t Endpoint_Null_Stream(uint16_t Length,
 #define  TEMPLATE_BUFFER_MOVE(BufferPtr, Amount)   BufferPtr -= Amount
 #define  TEMPLATE_TRANSFER_BYTE(BufferPtr)         *BufferPtr = Endpoint_Read_8()
 #include "Template/Template_Endpoint_Control_R.c"
+
+#endif
 
 #endif

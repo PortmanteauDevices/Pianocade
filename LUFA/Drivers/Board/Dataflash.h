@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -70,44 +70,44 @@
  *      SPI_Init(SPI_SPEED_FCPU_DIV_2 | SPI_ORDER_MSB_FIRST | SPI_SCK_LEAD_FALLING |
  *               SPI_SAMPLE_TRAILING | SPI_MODE_MASTER);
  *      Dataflash_Init();
- *
+ *      
  *      uint8_t WriteBuffer[DATAFLASH_PAGE_SIZE];
  *      uint8_t ReadBuffer[DATAFLASH_PAGE_SIZE];
- *
+ *      
  *      // Fill page write buffer with a repeating pattern
  *      for (uint16_t i = 0; i < DATAFLASH_PAGE_SIZE; i++)
  *        WriteBuffer[i] = (i & 0xFF);
- *
+ *      
  *      // Must select the chip of interest first before operating on it
  *      Dataflash_SelectChip(DATAFLASH_CHIP1);
- *
+ *      
  *      // Write to the Dataflash's first internal memory buffer
  *      printf("Writing data to first dataflash buffer:\r\n");
  *      Dataflash_SendByte(DF_CMD_BUFF1WRITE);
  *      Dataflash_SendAddressBytes(0, 0);
- *
+ *      
  *      for (uint16_t i = 0; i < DATAFLASH_PAGE_SIZE; i++)
  *        Dataflash_SendByte(WriteBuffer[i]);
- *
+ *      
  *      // Commit the Dataflash's first memory buffer to the non-volatile FLASH memory
  *      printf("Committing page to non-volatile memory page index 5:\r\n");
  *      Dataflash_SendByte(DF_CMD_BUFF1TOMAINMEMWITHERASE);
  *      Dataflash_SendAddressBytes(5, 0);
  *      Dataflash_WaitWhileBusy();
- *
+ *      
  *      // Read the page from non-volatile FLASH memory into the Dataflash's second memory buffer
  *      printf("Reading data into second dataflash buffer:\r\n");
  *      Dataflash_SendByte(DF_CMD_MAINMEMTOBUFF2);
  *      Dataflash_SendAddressBytes(5, 0);
  *      Dataflash_WaitWhileBusy();
- *
+ *      
  *      // Read the Dataflash's second internal memory buffer
  *      Dataflash_SendByte(DF_CMD_BUFF2READ);
  *      Dataflash_SendAddressBytes(0, 0);
- *
+ *      
  *      for (uint16_t i = 0; i < DATAFLASH_PAGE_SIZE; i++)
  *        ReadBuffer[i] = Dataflash_ReceiveByte();
- *
+ *      
  *      // Deselect the chip after use
  *      Dataflash_DeselectChip();
  *  \endcode
@@ -122,8 +122,7 @@
 		#define __INCLUDE_FROM_DATAFLASH_H
 
 	/* Includes: */
-	#include "../../Common/Common.h"
-	#include "../Peripheral/SPI.h"
+		#include "../../Common/Common.h"
 
 	/* Enable C linkage for C++ Compilers: */
 		#if defined(__cplusplus)
@@ -148,7 +147,9 @@
 		/* Inline Functions: */
 			/** Initializes the dataflash driver so that commands and data may be sent to an attached dataflash IC.
 			 *
-			 *  \note The microcontroller's SPI driver must be initialized before any of the dataflash commands are used.
+			 *  \note The microcontroller's physical interface driver connected to the Dataflash IC must be initialized before
+			 *        any of the dataflash commands are used. This is usually a SPI hardware port, but on some devices/boards may
+			 *        be a USART operating in SPI Master mode.
 			 */
 			static inline void Dataflash_Init(void);
 
@@ -201,35 +202,23 @@
 
 			/** Sends a byte to the currently selected dataflash IC, and returns a byte from the dataflash.
 			 *
-			 *  \param[in] Byte of data to send to the dataflash
+			 *  \param[in] Byte  Byte of data to send to the dataflash
 			 *
 			 *  \return Last response byte from the dataflash
 			 */
 			static inline uint8_t Dataflash_TransferByte(const uint8_t Byte) ATTR_ALWAYS_INLINE;
-			static inline uint8_t Dataflash_TransferByte(const uint8_t Byte)
-			{
-				return SPI_TransferByte(Byte);
-			}
 
 			/** Sends a byte to the currently selected dataflash IC, and ignores the next byte from the dataflash.
 			 *
-			 *  \param[in] Byte of data to send to the dataflash
+			 *  \param[in] Byte  Byte of data to send to the dataflash
 			 */
 			static inline void Dataflash_SendByte(const uint8_t Byte) ATTR_ALWAYS_INLINE;
-			static inline void Dataflash_SendByte(const uint8_t Byte)
-			{
-				SPI_SendByte(Byte);
-			}
 
 			/** Sends a dummy byte to the currently selected dataflash IC, and returns the next byte from the dataflash.
 			 *
 			 *  \return Last response byte from the dataflash
 			 */
 			static inline uint8_t Dataflash_ReceiveByte(void) ATTR_ALWAYS_INLINE ATTR_WARN_UNUSED_RESULT;
-			static inline uint8_t Dataflash_ReceiveByte(void)
-			{
-				return SPI_ReceiveByte();
-			}
 
 		/* Includes: */
 			#if (BOARD == BOARD_NONE)
@@ -244,6 +233,10 @@
 				#include "AVR8/XPLAIN/Dataflash.h"
 			#elif (BOARD == BOARD_EVK527)
 				#include "AVR8/EVK527/Dataflash.h"
+			#elif (BOARD == BOARD_A3BU_XPLAINED)
+				#include "XMEGA/A3BU_XPLAINED/Dataflash.h"
+			#elif (BOARD == BOARD_B1_XPLAINED)
+				#include "XMEGA/B1_XPLAINED/Dataflash.h"
 			#else
 				#include "Board/Dataflash.h"
 			#endif

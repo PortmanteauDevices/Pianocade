@@ -1,20 +1,24 @@
 #include "MIDI.h"
 
 USB_ClassInfo_MIDI_Device_t Keyboard_MIDI_Interface =
-    {
-        .Config =
-            {
-                .StreamingInterfaceNumber = 1,
-
-                .DataINEndpointNumber      = MIDI_STREAM_IN_EPNUM,
-                .DataINEndpointSize        = MIDI_STREAM_EPSIZE,
-                .DataINEndpointDoubleBank  = false,
-
-                .DataOUTEndpointNumber     = MIDI_STREAM_OUT_EPNUM,
-                .DataOUTEndpointSize       = MIDI_STREAM_EPSIZE,
-                .DataOUTEndpointDoubleBank = false,
-            },
-    };
+	{
+		.Config =
+			{
+				.StreamingInterfaceNumber = 1,
+				.DataINEndpoint           =
+					{
+						.Address          = MIDI_STREAM_IN_EPADDR,
+						.Size             = MIDI_STREAM_EPSIZE,
+						.Banks            = 1,
+					},
+				.DataOUTEndpoint           =
+					{
+						.Address          = MIDI_STREAM_OUT_EPADDR,
+						.Size             = MIDI_STREAM_EPSIZE,
+						.Banks            = 1,
+					},
+			},
+	};
 
 uint16_t midi_notes[OCTAVE_TOTAL] = {0};
 uint8_t midi_changed = 0;
@@ -43,8 +47,7 @@ static inline void _tx(uint8_t MIDICommand, uint8_t MIDIPitch, uint8_t velocity)
     SerialPrint(velocity);
 
     MIDI_EventPacket_t MIDIEvent = (MIDI_EventPacket_t){
-        .CableNumber = 0,
-        .Command     = (MIDICommand >> 4),
+        .Event       = MIDI_EVENT(MIDICABLE, MIDICommand),
 
         .Data1       = MIDICommand | MIDICHANNEL,
         .Data2       = MIDIPitch,
@@ -69,7 +72,7 @@ static inline void _rx_USB(void){
 
     MIDI_EventPacket_t ReceivedMIDIEvent;
     while (MIDI_Device_ReceiveEventPacket(&Keyboard_MIDI_Interface, &ReceivedMIDIEvent)){      
-        unsigned char midiCommand = (ReceivedMIDIEvent.Command << 4);
+        unsigned char midiCommand = (ReceivedMIDIEvent.Event << 4);
         
         // Data bytes should NEVER have bit 7 set
         if(((ReceivedMIDIEvent.Data2 || ReceivedMIDIEvent.Data3) & 0b10000000)
@@ -115,7 +118,7 @@ static inline void _rx_USB(void){
             continue; // No further processing needed
         };
 
-        if(ReceivedMIDIEvent.CableNumber == MIDICABLE){
+        if((ReceivedMIDIEvent.Event >> 4) == MIDICABLE){
             _rx_processMIDIpacket(midiCommand, ReceivedMIDIEvent.Data1, ReceivedMIDIEvent.Data2, ReceivedMIDIEvent.Data3);
         }
     }

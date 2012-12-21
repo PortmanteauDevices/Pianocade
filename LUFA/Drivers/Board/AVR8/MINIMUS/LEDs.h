@@ -1,21 +1,21 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
-              
+     Copyright (C) Dean Camera, 2012.
+
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
-  Permission to use, copy, modify, distribute, and sell this 
+  Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
-  without fee, provided that the above copyright notice appear in 
+  without fee, provided that the above copyright notice appear in
   all copies and that both that the copyright notice and this
-  permission notice and warranty disclaimer appear in supporting 
-  documentation, and that the name of the author not be used in 
-  advertising or publicity pertaining to distribution of the 
+  permission notice and warranty disclaimer appear in supporting
+  documentation, and that the name of the author not be used in
+  advertising or publicity pertaining to distribution of the
   software without specific, written prior permission.
 
   The author disclaim all warranties with regard to this
@@ -41,6 +41,13 @@
  *  \brief Board specific LED driver header for the MINIMUS.
  *
  *  Board specific LED driver header for the Minimus USB (http://www.minimususb.com/).
+ *
+ *  <table>
+ *    <tr><th>Name</th><th>Color</th><th>Info</th><th>Active Level</th><th>Port Pin</th></tr>
+ *    <tr><td>LEDS_LED1</td><td>Red</td><td>General Indicator</td><td>Low</td><td>PORTD.5</td></tr>
+ *    <tr><td>LEDS_LED2</td><td>Green</td><td>General Indicator</td><td>Low</td><td>PORTD.6</td></tr>
+ *    <tr><td>LEDS_LED3</td><td>Blue</td><td>General Indicator</td><td>Low</td><td>PORTD.7</td></tr>
+ *  </table>
  *
  *  @{
  */
@@ -69,11 +76,14 @@
 			/** LED mask for the second LED on the board. */
 			#define LEDS_LED2        (1 << 6)
 
+			/** LED mask for the third LED on the board. */
+			#define LEDS_LED3        (1 << 7)
+
 			/** LED mask for all the LEDs on the board. */
-			#define LEDS_ALL_LEDS    (LEDS_LED1 | LEDS_LED2)
+			#define LEDS_ALL_LEDS    (LEDS_LED1 | LEDS_LED2 | LEDS_LED3)
 
 			/** LED mask for the none of the board LEDs. */
-			#define LEDS_NO_LEDS     1
+			#define LEDS_NO_LEDS     0
 
 		/* Inline Functions: */
 		#if !defined(__DOXYGEN__)
@@ -82,7 +92,13 @@
 				DDRD  |= LEDS_ALL_LEDS;
 				PORTD |= LEDS_ALL_LEDS;
 			}
-			
+
+			static inline void LEDs_Disable(void)
+			{
+				DDRD  &= ~LEDS_ALL_LEDS;
+				PORTD &= ~LEDS_ALL_LEDS;
+			}
+
 			static inline void LEDs_TurnOnLEDs(const uint8_t LEDMask)
 			{
 				PORTD &= ~LEDMask;
@@ -97,18 +113,18 @@
 			{
 				PORTD = ((PORTD | LEDS_ALL_LEDS) & ~LEDMask);
 			}
-			
+
 			static inline void LEDs_ChangeLEDs(const uint8_t LEDMask,
 			                                   const uint8_t ActiveMask)
 			{
 				PORTD = ((PORTD & ~LEDMask) | ActiveMask);
 			}
-			
+
 			static inline void LEDs_ToggleLEDs(const uint8_t LEDMask)
 			{
-				PORTD ^= LEDMask;
+				PIND  = LEDMask;
 			}
-			
+
 			static inline uint8_t LEDs_GetLEDs(void) ATTR_WARN_UNUSED_RESULT;
 			static inline uint8_t LEDs_GetLEDs(void)
 			{
@@ -120,7 +136,8 @@
 		#if defined(__cplusplus)
 			}
 		#endif
-		
+
 #endif
 
 /** @} */
+
