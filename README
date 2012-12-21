@@ -1,20 +1,31 @@
 Welcome to Pianocade!
 
-== CONTROLS ==
-KEYBOARD BUTTONS: sound notes. When held on power-up, the keyboard will be transposed to the key of the held note
+# CONTROLS
 
-JOYSTICK LEFT: shift keyboard one octave down. With left coin button, decrease the arp speed two-fold
-JOYSTICK RIGHT: shift keyboard one octave up. With left coin button, increase the arp speed two-fold
-JOYSTICK UP: pitch bend current note up. With left coin button, increase the arp speed by a small amount.
-JOYSTICK DOWN: pitch bend current note down. With left coin button, decrease the arp speed by a small amount
+## Keyboard
+Most of the buttons on the Pianocade are set up in the layout of a standard piano keyboard. Normally, these buttons sound notes. When held on power-up, the keyboard will be transposed to the key of the held note.
 
-PLAYER 1-4: select sound bank. Buttons can be pressed as chords, for a total of 15 sound banks
-PLAYER 1 + LEFT COINT BUTTON: change the arpeggiator order
+## Joystick
+###JOYSTICK LEFT
+Shift keyboard one octave down. With left coin button, decrease the arp speed two-fold.
+### JOYSTICK RIGHT
+Shift keyboard one octave up. With left coin button, increase the arp speed two-fold.
+### JOYSTICK UP
+Pitch bend current note up. With left coin button, increase the arp speed by a small amount.
+### JOYSTICK DOWN
+Pitch bend current note down. With left coin button, decrease the arp speed by a small amount.
 
-LEFT COIN BUTTON: acts as "shift" key to access secondary functions
-RIGHT COIN BUTTON: hold the currently sounding notes. With left coin button, clear currently held notes
+## Player select buttons
+These buttons select sound bank. They can be combined into as chords, for a total of 15 sound banks.
+### PLAYER 1 + LEFT COINT BUTTON: change the arpeggiator order
 
-== ARPEGGIATOR ==
+## Coin buttons
+### LEFT COIN BUTTON
+acts as "shift" key to access secondary functions
+### RIGHT COIN BUTTON
+hold the currently sounding notes. With left coin button, clear currently held notes
+
+# Arpeggiator
 The Pianocade is monophonic: only one note sounds at a time. When multiple notes are sounded simultaneously, the Pianocade arpeggiates them (switches between them quickly). Both the rate and the order of arpeggiation can be set on a per-patch basis.
 
 The available arpeggiation orders are: ascending, descending, random, ping-pong, order pressed
