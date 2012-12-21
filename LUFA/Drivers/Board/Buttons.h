@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -68,17 +68,17 @@
  *  \code
  *      // Initialize the button driver before first use
  *      Buttons_Init();
- *
+ *      
  *      printf("Waiting for button press...\r\n");
- *
+ *      
  *      // Loop until a board button has been pressed
  *      uint8_t ButtonPress;
  *      while (!(ButtonPress = Buttons_GetStatus())) {};
- *
+ *      
  *      // Display which button was pressed (assuming two board buttons)
  *      printf("Button pressed: %s\r\n", (ButtonPress == BUTTONS_BUTTON1) ? "Button 1" : "Button 2");
  *  \endcode
- * 
+ *
  *  @{
  */
 
@@ -131,18 +131,39 @@
 			#include "UC3/EVK1100/Buttons.h"
 		#elif (BOARD == BOARD_EVK1104)
 			#include "UC3/EVK1104/Buttons.h"
+		#elif (BOARD == BOARD_A3BU_XPLAINED)
+			#include "XMEGA/A3BU_XPLAINED/Buttons.h"
+		#elif ((BOARD == BOARD_USB2AX) || (BOARD == BOARD_USB2AX_V3))
+			#include "AVR8/USB2AX/Buttons.h"
+		#elif ((BOARD == BOARD_MICROPENDOUS_32U2) || (BOARD == BOARD_MICROPENDOUS_A) || \
+		       (BOARD == BOARD_MICROPENDOUS_1)    || (BOARD == BOARD_MICROPENDOUS_2) || \
+		       (BOARD == BOARD_MICROPENDOUS_3)    || (BOARD == BOARD_MICROPENDOUS_4) || \
+		       (BOARD == BOARD_MICROPENDOUS_REV1) || (BOARD == BOARD_MICROPENDOUS_REV2) || \
+		       (BOARD == BOARD_MICROPENDOUS_DIP))
+			#include "AVR8/MICROPENDOUS/Buttons.h"
+		#elif (BOARD == BOARD_B1_XPLAINED)
+			#include "XMEGA/B1_XPLAINED/Buttons.h"
+		#elif (BOARD == BOARD_OLIMEX32U4)
+			#include "AVR8/OLIMEX32U4/Buttons.h"		
+		#elif (BOARD == BOARD_OLIMEXT32U4)
+			#include "AVR8/OLIMEXT32U4/Buttons.h"		
+		#elif (BOARD == BOARD_OLIMEXISPMK2)
+			#include "AVR8/OLIMEXISPMK2/Buttons.h"	
 		#else
 			#include "Board/Buttons.h"
 		#endif
 
 	/* Pseudo-Functions for Doxygen: */
 	#if defined(__DOXYGEN__)
-		/** Initializes the BUTTONS driver, so that the current button position can be read. This sets the appropriate
+		/** Initializes the buttons driver, so that the current button position can be read. This sets the appropriate
 		 *  I/O pins to an inputs with pull-ups enabled.
 		 *
 		 *  This must be called before any Button driver functions are used.
 		 */
 		static inline void Buttons_Init(void);
+
+		/** Disables the buttons driver, releasing the I/O pins back to their default high-impedance input mode. */
+		static inline void Buttons_Disable(void);
 
 		/** Returns a mask indicating which board buttons are currently pressed.
 		 *

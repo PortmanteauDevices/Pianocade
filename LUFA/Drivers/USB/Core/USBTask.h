@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -43,7 +43,7 @@
 
 	/* Includes: */
 		#include "../../../Common/Common.h"
-		#include "USBMode.h"		
+		#include "USBMode.h"
 		#include "USBController.h"
 		#include "Events.h"
 		#include "StdRequestType.h"
@@ -73,15 +73,15 @@
 			 *  or device (i.e. if \ref USB_Init() has been run). If this is false, all other library globals related
 			 *  to the USB driver are invalid.
 			 *
-			 *  \note This variable should be treated as read-only in the user application, and never manually
-			 *        changed in value.
+			 *  \attention This variable should be treated as read-only in the user application, and never manually
+			 *             changed in value.
 			 *
 			 *  \ingroup Group_USBManagement
 			 */
 			extern volatile bool USB_IsInitialized;
 
 			/** Structure containing the last received Control request when in Device mode (for use in user-applications
-			 *  inside of the \ref EVENT_USB_Device_ControlRequest() event, or for filling up with a control request to 
+			 *  inside of the \ref EVENT_USB_Device_ControlRequest() event, or for filling up with a control request to
 			 *  issue when in Host mode before calling \ref USB_Host_SendControlRequest().
 			 *
 			 *  \note The contents of this structure is automatically endian-corrected for the current CPU architecture.
@@ -133,11 +133,11 @@
 					 *  the compiler via the -D switch. When defined, the corresponding GPIOR register should not be used
 					 *  in the user application except implicitly via the library APIs.
 					 *
+					 *  \attention This variable should be treated as read-only in the user application, and never manually
+					 *             changed in value except in the circumstances outlined above.
+					 *
 					 *  \note This global is only present if the user application can be a USB device.
 					 *        \n\n
-					 *
-					 *  \note This variable should be treated as read-only in the user application, and never manually
-					 *        changed in value except in the circumstances outlined above.
 					 *
 					 *  \see \ref USB_Device_States_t for a list of possible device states.
 					 *

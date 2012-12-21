@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -73,11 +73,11 @@
 				switch (Interrupt)
 				{
 					case USB_INT_BUSEVENTI:
-						USB.INTCTRLA |=  USB_BUSEVIE_bm;
+						USB.INTCTRLA |= USB_BUSEVIE_bm;
 						return;
 					case USB_INT_SOFI:
-						USB.INTCTRLA |=  USB_SOFIE_bm;						
-						return;				
+						USB.INTCTRLA |= USB_SOFIE_bm;
+						return;
 				}
 			}
 
@@ -90,11 +90,11 @@
 						USB.INTCTRLA &= ~USB_BUSEVIE_bm;
 						return;
 					case USB_INT_SOFI:
-						USB.INTCTRLA &= ~USB_SOFIE_bm;						
-						return;				
+						USB.INTCTRLA &= ~USB_SOFIE_bm;
+						return;
 				}
 			}
-			
+
 			static inline void USB_INT_Clear(const uint8_t Interrupt) ATTR_ALWAYS_INLINE;
 			static inline void USB_INT_Clear(const uint8_t Interrupt)
 			{
@@ -110,40 +110,40 @@
 						USB.INTFLAGSACLR = USB_RSTIF_bm;
 						return;
 					case USB_INT_SOFI:
-						USB.INTFLAGSACLR = USB_SOFIF_bm;						
-						return;				
+						USB.INTFLAGSACLR = USB_SOFIF_bm;
+						return;
 				}
 			}
-			
+
 			static inline bool USB_INT_IsEnabled(const uint8_t Interrupt) ATTR_ALWAYS_INLINE ATTR_WARN_UNUSED_RESULT;
 			static inline bool USB_INT_IsEnabled(const uint8_t Interrupt)
 			{
 				switch (Interrupt)
 				{
 					case USB_INT_BUSEVENTI:
-						return (USB.INTCTRLA & USB_BUSEVIE_bm);
+						return ((USB.INTCTRLA & USB_BUSEVIE_bm) ? true : false);
 					case USB_INT_SOFI:
-						return (USB.INTCTRLA & USB_SOFIE_bm);
+						return ((USB.INTCTRLA & USB_SOFIE_bm) ? true : false);
 				}
-				
+
 				return false;
 			}
-		
+
 			static inline bool USB_INT_HasOccurred(const uint8_t Interrupt) ATTR_ALWAYS_INLINE ATTR_WARN_UNUSED_RESULT;
 			static inline bool USB_INT_HasOccurred(const uint8_t Interrupt)
 			{
 				switch (Interrupt)
 				{
 					case USB_INT_BUSEVENTI_Suspend:
-						return (USB.INTFLAGSACLR & USB_SUSPENDIF_bm);
+						return ((USB.INTFLAGSACLR & USB_SUSPENDIF_bm) ? true : false);
 					case USB_INT_BUSEVENTI_Resume:
-						return (USB.INTFLAGSACLR & USB_RESUMEIF_bm);
+						return ((USB.INTFLAGSACLR & USB_RESUMEIF_bm) ? true : false);
 					case USB_INT_BUSEVENTI_Reset:
-						return (USB.INTFLAGSACLR & USB_RSTIF_bm);
+						return ((USB.INTFLAGSACLR & USB_RSTIF_bm) ? true : false);
 					case USB_INT_SOFI:
-						return (USB.INTFLAGSACLR & USB_SOFIF_bm);
+						return ((USB.INTFLAGSACLR & USB_SOFIF_bm) ? true : false);
 				}
-				
+
 				return false;
 			}
 

@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -79,7 +79,7 @@
 				#define ANSI_ESCAPE_SEQUENCE(EscapeSeq)
 			#endif
 
-			/** \name Text Display Modifier Escape Sequences */
+			/** \name Text Display Modifier Control Sequences */
 			//@{
 			/** Turns on bold so that any following text is printed to the terminal in bold. */
 			#define ESC_BOLD_ON                     ANSI_ESCAPE_SEQUENCE("1m")
@@ -115,7 +115,7 @@
 			 */
 			#define ESC_STRIKETHROUGH_OFF           ANSI_ESCAPE_SEQUENCE("29m")
 			//@}
-			
+
 			/** \name Text Colour Control Sequences */
 			//@{
 			/** Sets the foreground (text) colour to black. */

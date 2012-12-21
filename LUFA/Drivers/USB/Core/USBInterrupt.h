@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -43,7 +43,7 @@
 
 	/* Includes: */
 		#include "../../../Common/Common.h"
-		#include "USBMode.h"		
+		#include "USBMode.h"
 
 	/* Enable C linkage for C++ Compilers: */
 		#if defined(__cplusplus)
@@ -61,7 +61,7 @@
 		#elif (ARCH == ARCH_UC3)
 			#include "UC3/USBInterrupt_UC3.h"
 		#elif (ARCH == ARCH_XMEGA)
-			#include "XMEGA/USBInterrupt_XMEGA.h"	
+			#include "XMEGA/USBInterrupt_XMEGA.h"
 		#endif
 
 	/* Disable C linkage for C++ Compilers: */

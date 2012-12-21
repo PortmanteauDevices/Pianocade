@@ -1,21 +1,21 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
-              
+     Copyright (C) Dean Camera, 2012.
+
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
-  Permission to use, copy, modify, distribute, and sell this 
+  Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
-  without fee, provided that the above copyright notice appear in 
+  without fee, provided that the above copyright notice appear in
   all copies and that both that the copyright notice and this
-  permission notice and warranty disclaimer appear in supporting 
-  documentation, and that the name of the author not be used in 
-  advertising or publicity pertaining to distribution of the 
+  permission notice and warranty disclaimer appear in supporting
+  documentation, and that the name of the author not be used in
+  advertising or publicity pertaining to distribution of the
   software without specific, written prior permission.
 
   The author disclaim all warranties with regard to this
@@ -35,12 +35,17 @@
  *  \note This file should not be included directly. It is automatically included as needed by the Buttons driver
  *        dispatch header located in LUFA/Drivers/Board/Buttons.h.
  */
- 
+
 /** \ingroup Group_Buttons
  *  \defgroup Group_Buttons_MINIMUS MINIMUS
  *  \brief Board specific Buttons driver header for the MINIMUS.
  *
  *  Board specific Buttons driver header for the MINIMUS.
+ *
+ *  <table>
+ *    <tr><th>Name</th><th>Info</th><th>Active Level</th><th>Port Pin</th></tr>
+ *    <tr><td>BUTTONS_BUTTON1</td><td>HWB Button</td><td>Low</td><td>PORTD.7</td></tr>
+ *  </table>
  *
  *  @{
  */
@@ -60,18 +65,24 @@
 		#if !defined(__INCLUDE_FROM_BUTTONS_H)
 			#error Do not include this file directly. Include LUFA/Drivers/Board/Buttons.h instead.
 		#endif
-		
+
 	/* Public Interface - May be used in end-application: */
 		/* Macros: */
 			/** Button mask for the first button on the board. */
 			#define BUTTONS_BUTTON1      (1 << 7)
-	
+
 		/* Inline Functions: */
 		#if !defined(__DOXYGEN__)
 			static inline void Buttons_Init(void)
 			{
 				DDRD  &= ~BUTTONS_BUTTON1;
 				PORTD |=  BUTTONS_BUTTON1;
+			}
+
+			static inline void Buttons_Disable(void)
+			{
+				DDRD  &= ~BUTTONS_BUTTON1;
+				PORTD &= ~BUTTONS_BUTTON1;
 			}
 
 			static inline uint8_t Buttons_GetStatus(void) ATTR_WARN_UNUSED_RESULT;
@@ -85,7 +96,8 @@
 		#if defined(__cplusplus)
 			}
 		#endif
-			
+
 #endif
 
 /** @} */
+

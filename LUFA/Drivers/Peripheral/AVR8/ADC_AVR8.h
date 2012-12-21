@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -55,14 +55,14 @@
  *  \code
  *      // Initialize the ADC driver before first use
  *      ADC_Init(ADC_FREE_RUNNING | ADC_PRESCALE_32);
- *
+ *      
  *      // Must setup the ADC channel to read beforehand
  *      ADC_SetupChannel(1);
- *
+ *      
  *      // Perform a single conversion of the ADC channel 1
  *      ADC_GetChannelReading(ADC_REFERENCE_AVCC | ADC_RIGHT_ADJUSTED | ADC_CHANNEL1);
  *      printf("Conversion Result: %d\r\n", ADC_GetResult());
- *
+ *      
  *      // Start reading ADC channel 1 in free running (continuous conversion) mode
  *      ADC_StartReading(ADC_REFERENCE_AVCC | ADC_RIGHT_ADJUSTED | ADC_CHANNEL1);
  *      for (;;)
@@ -104,7 +104,7 @@
 			#define _ADC_GET_MUX_MASK2(y)           ADC_CHANNEL ## y
 			#define _ADC_GET_MUX_MASK(y)            _ADC_GET_MUX_MASK2(y)
 	#endif
-	
+
 	/* Public Interface - May be used in end-application: */
 		/* Macros: */
 			/** \name ADC Reference Configuration Masks */
@@ -118,7 +118,7 @@
 			/** Reference mask, for using the internally generated 2.56V reference voltage as the ADC reference. */
 			#define ADC_REFERENCE_INT2560MV         ((1 << REFS1) | (1 << REFS0))
 			//@}
-			
+
 			/** \name ADC Result Adjustment Configuration Masks */
 			//@{
 			/** Left-adjusts the 10-bit ADC result, so that the upper 8 bits of the value returned by the
@@ -144,7 +144,7 @@
 			 */
 			#define ADC_SINGLE_CONVERSION           (0 << ADATE)
 			//@}
-			
+
 			/** \name ADC Prescaler Configuration Masks */
 			//@{
 			/** Sets the ADC input clock to prescale by a factor of 2 the AVR's system clock. */
@@ -177,7 +177,7 @@
 			/** MUX mask define for the ADC1 channel of the ADC. See \ref ADC_StartReading() and \ref ADC_GetChannelReading(). */
 			#define ADC_CHANNEL1                    (0x01 << MUX0)
 
-			#if !(defined(__AVR_ATmega16U4__)  || defined(__AVR_ATmega32U4__) || defined(__DOXYGEN__))
+			#if (!(defined(__AVR_ATmega16U4__) || defined(__AVR_ATmega32U4__)) || defined(__DOXYGEN__))
 				/** MUX mask define for the ADC2 channel of the ADC. See \ref ADC_StartReading() and \ref ADC_GetChannelReading().
 				 *
 				 *  \note Not available on all AVR models.
@@ -202,9 +202,6 @@
 
 			/** MUX mask define for the ADC7 channel of the ADC. See \ref ADC_StartReading and \ref ADC_GetChannelReading. */
 			#define ADC_CHANNEL7                    (0x07 << MUX0)
-
-			/** MUX mask define for the internal 1.1V bandgap channel of the ADC. See \ref ADC_StartReading() and \ref ADC_GetChannelReading(). */
-			#define ADC_1100MV_BANDGAP              (0x1E << MUX0)
 
 			#if (defined(__AVR_ATmega16U4__)  || defined(__AVR_ATmega32U4__) || defined(__DOXYGEN__))
 				/** MUX mask define for the ADC8 channel of the ADC. See \ref ADC_StartReading() and \ref ADC_GetChannelReading().
@@ -251,10 +248,13 @@
 				#define ADC_INT_TEMP_SENS           ((1 << 8) | (0x07 << MUX0))
 			#endif
 
+			/** MUX mask define for the internal 1.1V band-gap channel of the ADC. See \ref ADC_StartReading() and \ref ADC_GetChannelReading(). */
+			#define ADC_1100MV_BANDGAP              (0x1E << MUX0)
+
 			/** Retrieves the ADC MUX mask for the given ADC channel number.
 			 *
-			 *  \note This macro will only work correctly on channel numbers that are compile-time
-			 *        constants defined by the preprocessor.
+			 *  \attention This macro will only work correctly on channel numbers that are compile-time
+			 *             constants defined by the preprocessor.
 			 *
 			 *  \param[in] Channel  Index of the ADC channel whose MUX mask is to be retrieved.
 			 */
@@ -268,9 +268,8 @@
 			 *
 			 *  \note This must only be called for ADC channels with are connected to a physical port
 			 *        pin of the AVR, denoted by its special alternative function ADCx.
-			 *        \n\n
 			 *
-			 *  \note The channel number must be specified as an integer, and <b>not</b> a \c ADC_CHANNEL* mask.
+			 *  \warning The channel number must be specified as an integer, and <b>not</b> a \c ADC_CHANNEL* mask.
 			 *
 			 *  \param[in] ChannelIndex  ADC channel number to set up for conversions.
 			 */
@@ -311,9 +310,8 @@
 			 *
 			 *  \note This must only be called for ADC channels with are connected to a physical port
 			 *        pin of the AVR, denoted by its special alternative function ADCx.
-			 *        \n\n
 			 *
-			 *  \note The channel number must be specified as an integer, and <b>not</b> a \c ADC_CHANNEL* mask.
+			 *  \warning The channel number must be specified as an integer, and <b>not</b> a \c ADC_CHANNEL* mask.
 			 *
 			 *  \param[in] ChannelIndex  ADC channel number to set up for conversions.
 			 */
@@ -422,8 +420,8 @@
 			 *
 			 *  \param[in] Mode  Mask of ADC prescale and mode settings.
 			 */
-			static inline void ADC_Init(uint8_t Mode) ATTR_ALWAYS_INLINE;
-			static inline void ADC_Init(uint8_t Mode)
+			static inline void ADC_Init(const uint8_t Mode) ATTR_ALWAYS_INLINE;
+			static inline void ADC_Init(const uint8_t Mode)
 			{
 				ADCSRA = ((1 << ADEN) | Mode);
 			}

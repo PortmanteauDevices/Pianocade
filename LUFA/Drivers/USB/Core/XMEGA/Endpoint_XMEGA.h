@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -88,17 +88,44 @@
 			#error Do not include this file directly. Include LUFA/Drivers/USB/USB.h instead.
 		#endif
 
+	/* Public Interface - May be used in end-application: */
+		/* Macros: */
+			#if (!defined(MAX_ENDPOINT_INDEX) && !defined(CONTROL_ONLY_DEVICE)) || defined(__DOXYGEN__)
+				/** Total number of endpoints (including the default control endpoint at address 0) which may
+				 *  be used in the device. Different USB AVR models support different amounts of endpoints,
+				 *  this value reflects the maximum number of endpoints for the currently selected AVR model.
+				 */
+				#define ENDPOINT_TOTAL_ENDPOINTS            16
+			#else
+				#if defined(CONTROL_ONLY_DEVICE)
+					#define ENDPOINT_TOTAL_ENDPOINTS        1
+				#else
+					#define ENDPOINT_TOTAL_ENDPOINTS        (MAX_ENDPOINT_INDEX + 1)
+				#endif
+			#endif
+
 	/* Private Interface - For use in library only: */
 	#if !defined(__DOXYGEN__)
-		/* Macros: */
-			#define _ENDPOINT_GET_MAXSIZE(EPIndex)         1023
-			#define _ENDPOINT_GET_BANKS(EPIndex)           2
+		/* Type Defines: */
+			typedef struct
+			{
+				uint8_t Data[64];
 
-			#define ENDPOINT_DETAILS_MAXEP                 16
+				uint8_t Length;
+				uint8_t Position;
+			} Endpoint_FIFO_t;
+
+			typedef struct
+			{
+				Endpoint_FIFO_t OUT;
+				Endpoint_FIFO_t IN;
+			} Endpoint_FIFOPair_t;
 
 		/* External Variables: */
-			extern volatile uint8_t   Endpoint_SelectedEndpoint;
-			extern volatile USB_EP_t* Endpoint_SelectedEndpointHandle;
+			extern Endpoint_FIFOPair_t       USB_Endpoint_FIFOs[ENDPOINT_TOTAL_ENDPOINTS];
+			extern volatile uint8_t          USB_Endpoint_SelectedEndpoint;
+			extern volatile USB_EP_t*        USB_Endpoint_SelectedHandle;
+			extern volatile Endpoint_FIFO_t* USB_Endpoint_SelectedFIFO;
 
 		/* Inline Functions: */
 			static inline uint8_t Endpoint_BytesToEPSizeMask(const uint16_t Bytes) ATTR_WARN_UNUSED_RESULT ATTR_CONST
@@ -118,61 +145,19 @@
 			}
 
 		/* Function Prototypes: */
+			bool Endpoint_ConfigureEndpoint_PRV(const uint8_t Address,
+			                                    const uint8_t Config,
+			                                    const uint8_t Size);
 			void Endpoint_ClearEndpoints(void);
 	#endif
 
 	/* Public Interface - May be used in end-application: */
-		/* Macros: */			
-			/** \name Endpoint Bank Mode Masks */
-			//@{
-			/** Mask for the bank mode selection for the \ref Endpoint_ConfigureEndpoint() macro. This indicates
-			 *  that the endpoint should have one single bank, which requires less USB FIFO memory but results
-			 *  in slower transfers as only one USB device (the AVR or the host) can access the endpoint's
-			 *  bank at the one time.
-			 */
-			#define ENDPOINT_BANK_SINGLE                    0
-
-			/** Mask for the bank mode selection for the \ref Endpoint_ConfigureEndpoint() macro. This indicates
-			 *  that the endpoint should have two banks, which requires more USB FIFO memory but results
-			 *  in faster transfers as one USB device (the AVR or the host) can access one bank while the other
-			 *  accesses the second bank.
-			 */
-			#define ENDPOINT_BANK_DOUBLE                    USB_EP_PINGPONG_bm
-			//@}
-
+		/* Macros: */
 			#if (!defined(FIXED_CONTROL_ENDPOINT_SIZE) || defined(__DOXYGEN__))
 				/** Default size of the default control endpoint's bank, until altered by the control endpoint bank size
 				 *  value in the device descriptor. Not available if the \c FIXED_CONTROL_ENDPOINT_SIZE token is defined.
 				 */
 				#define ENDPOINT_CONTROLEP_DEFAULT_SIZE     8
-			#endif
-
-			/** Retrieves the maximum bank size in bytes of a given endpoint.
-			 *
-			 *  \note This macro will only work correctly on endpoint indexes that are compile-time constants
-			 *        defined by the preprocessor.
-			 *
-			 *  \param[in] EPIndex  Endpoint number, a value between 0 and (\ref ENDPOINT_TOTAL_ENDPOINTS - 1)
-			 */
-			#define ENDPOINT_MAX_SIZE(EPIndex)              _ENDPOINT_GET_MAXSIZE(EPIndex)
-
-			/** Retrieves the total number of banks supported by the given endpoint.
-			 *
-			 *  \note This macro will only work correctly on endpoint indexes that are compile-time constants
-			 *        defined by the preprocessor.
-			 *
-			 *  \param[in] EPIndex  Endpoint number, a value between 0 and (\ref ENDPOINT_TOTAL_ENDPOINTS - 1)
-			 */
-			#define ENDPOINT_BANKS_SUPPORTED(EPIndex)       _ENDPOINT_GET_BANKS(EPIndex)
-
-			#if !defined(CONTROL_ONLY_DEVICE) || defined(__DOXYGEN__)
-				/** Total number of endpoints (including the default control endpoint at address 0) which may
-				 *  be used in the device. Different USB AVR models support different amounts of endpoints,
-				 *  this value reflects the maximum number of endpoints for the currently selected AVR model.
-				 */
-				#define ENDPOINT_TOTAL_ENDPOINTS            ENDPOINT_DETAILS_MAXEP
-			#else
-				#define ENDPOINT_TOTAL_ENDPOINTS            1
 			#endif
 
 		/* Enums: */
@@ -200,102 +185,95 @@
 			};
 
 		/* Inline Functions: */
-			/** Selects the given endpoint number. If the address from the device descriptors is used, the
-			 *  value should be masked with the \ref ENDPOINT_EPNUM_MASK constant to extract only the endpoint
-			 *  number (and discarding the endpoint direction bit).
+			/** Selects the given endpoint address.
 			 *
-			 *  Any endpoint operations which do not require the endpoint number to be indicated will operate on
+			 *  Any endpoint operations which do not require the endpoint address to be indicated will operate on
 			 *  the currently selected endpoint.
 			 *
-			 *  \param[in] EndpointNumber Endpoint number to select.
+			 *  \param[in] Address  Endpoint address to select.
 			 */
-			static inline void Endpoint_SelectEndpoint(const uint8_t EndpointNumber) ATTR_ALWAYS_INLINE;
-			static inline void Endpoint_SelectEndpoint(const uint8_t EndpointNumber)
+			static inline void Endpoint_SelectEndpoint(const uint8_t Address);
+			static inline void Endpoint_SelectEndpoint(const uint8_t Address)
 			{
-				uint8_t EPTableIndex = ((EndpointNumber & ENDPOINT_EPNUM_MASK) << 1) |
-				                        ((EndpointNumber & ENDPOINT_DIR_IN) ? 0x01 : 0);
+				uint8_t EndpointNumber = (Address & ENDPOINT_EPNUM_MASK);
 
-				Endpoint_SelectedEndpoint       = EndpointNumber;
-				Endpoint_SelectedEndpointHandle = &((USB_EP_t*)&USB_EndpointTable)[EPTableIndex];
+				USB_Endpoint_SelectedEndpoint = Address;
+
+				if (Address & ENDPOINT_DIR_IN)
+				{
+					USB_Endpoint_SelectedFIFO   = &USB_Endpoint_FIFOs[EndpointNumber].IN;
+					USB_Endpoint_SelectedHandle = &((USB_EndpointTable_t*)USB.EPPTR)->Endpoints[EndpointNumber].IN;
+				}
+				else
+				{
+					USB_Endpoint_SelectedFIFO   = &USB_Endpoint_FIFOs[EndpointNumber].OUT;
+					USB_Endpoint_SelectedHandle = &((USB_EndpointTable_t*)USB.EPPTR)->Endpoints[EndpointNumber].OUT;
+				}
 			}
 
-			/** Configures the specified endpoint number with the given endpoint type, direction, bank size
+			/** Configures the specified endpoint address with the given endpoint type, direction, bank size
 			 *  and banking mode. Once configured, the endpoint may be read from or written to, depending
 			 *  on its direction.
 			 *
-			 *  \param[in] Number     Endpoint number to configure. This must be more than 0 and less than
-			 *                        \ref ENDPOINT_TOTAL_ENDPOINTS.
+			 *  \param[in] Address    Endpoint address to configure.
 			 *
 			 *  \param[in] Type       Type of endpoint to configure, a \c EP_TYPE_* mask. Not all endpoint types
 			 *                        are available on Low Speed USB devices - refer to the USB 2.0 specification.
-			 *
-			 *  \param[in] Direction  Endpoint data direction, either \ref ENDPOINT_DIR_OUT or \ref ENDPOINT_DIR_IN.
-			 *                        All endpoints (except Control type) are unidirectional - data may only be read
-			 *                        from or written to the endpoint bank based on its direction, not both.
 			 *
 			 *  \param[in] Size       Size of the endpoint's bank, where packets are stored before they are transmitted
 			 *                        to the USB host, or after they have been received from the USB host (depending on
 			 *                        the endpoint's data direction). The bank size must indicate the maximum packet size
 			 *                        that the endpoint can handle.
 			 *
-			 *  \param[in] Banks      Number of banks to use for the endpoint being configured, an \c ENDPOINT_BANK_* mask.
-			 *                        More banks uses more USB DPRAM, but offers better performance. Isochronous type
-			 *                        endpoints <b>must</b> have at least two banks.
-			 *
-			 *  \note When the \c ORDERED_EP_CONFIG compile time option is used, Endpoints <b>must</b> be configured in
-			 *        ascending order, or bank corruption will occur.
-			 *        \n\n
-			 *
-			 *  \note Different endpoints may have different maximum packet sizes based on the endpoint's index - refer to
-			 *        the chosen microcontroller model's datasheet to determine the maximum bank size for each endpoint.
-			 *        \n\n
+			 *  \param[in] Banks      Number of hardware banks to use for the endpoint being configured.
 			 *
 			 *  \note The default control endpoint should not be manually configured by the user application, as
 			 *        it is automatically configured by the library internally.
 			 *        \n\n
 			 *
-			 *  \note This routine will automatically select the specified endpoint upon success. Upon failure, the endpoint
-			 *        which failed to reconfigure correctly will be selected.
+			 *  \note This routine will automatically select the specified endpoint.
 			 *
 			 *  \return Boolean \c true if the configuration succeeded, \c false otherwise.
 			 */
-			static inline bool Endpoint_ConfigureEndpoint(const uint8_t Number,
+			static inline bool Endpoint_ConfigureEndpoint(const uint8_t Address,
 			                                              const uint8_t Type,
-			                                              const uint8_t Direction,
 			                                              const uint16_t Size,
 			                                              const uint8_t Banks) ATTR_ALWAYS_INLINE;
-			static inline bool Endpoint_ConfigureEndpoint(const uint8_t Number,
+			static inline bool Endpoint_ConfigureEndpoint(const uint8_t Address,
 			                                              const uint8_t Type,
-			                                              const uint8_t Direction,
 			                                              const uint16_t Size,
 			                                              const uint8_t Banks)
 			{
-				Endpoint_SelectEndpoint(Number | Direction);
+				uint8_t EPConfigMask = (USB_EP_INTDSBL_bm | ((Banks > 1) ? USB_EP_PINGPONG_bm : 0) | Endpoint_BytesToEPSizeMask(Size));
 
-				uint8_t EPTypeMask = 0;
+				if ((Address & ENDPOINT_EPNUM_MASK) >= ENDPOINT_TOTAL_ENDPOINTS)
+				  return false;
+
+				// TODO - Fix once limitations are lifted
+				EPConfigMask &= ~USB_EP_PINGPONG_bm;
+				if (Size > 64)
+				  return false;
+
 				switch (Type)
 				{
 					case EP_TYPE_CONTROL:
-						EPTypeMask = USB_EP_TYPE_CONTROL_gc;
+						EPConfigMask |= USB_EP_TYPE_CONTROL_gc;
 						break;
 					case EP_TYPE_ISOCHRONOUS:
-						EPTypeMask = USB_EP_TYPE_ISOCHRONOUS_gc;
+						EPConfigMask |= USB_EP_TYPE_ISOCHRONOUS_gc;
 						break;
 					default:
-						EPTypeMask = USB_EP_TYPE_BULK_gc;
+						EPConfigMask |= USB_EP_TYPE_BULK_gc;
 						break;
 				}
-	
-				Endpoint_SelectedEndpointHandle->CTRL   = 0;
-				Endpoint_SelectedEndpointHandle->STATUS = (USB_EP_BUSNACK0_bm | USB_EP_BUSNACK1_bm);
-				Endpoint_SelectedEndpointHandle->CTRL   = (EPTypeMask | Banks | Endpoint_BytesToEPSizeMask(Size));
-				return true;
+
+				if (Type == EP_TYPE_CONTROL)
+				  Endpoint_ConfigureEndpoint_PRV(Address ^ ENDPOINT_DIR_IN, EPConfigMask, Size);
+
+				return Endpoint_ConfigureEndpoint_PRV(Address, EPConfigMask, Size);
 			}
 
 			/** Indicates the number of bytes currently stored in the current endpoint's selected bank.
-			 *
-			 *  \note The return width of this function may differ, depending on the maximum endpoint bank size
-			 *        of the selected AVR model.
 			 *
 			 *  \ingroup Group_EndpointRW_XMEGA
 			 *
@@ -304,30 +282,36 @@
 			static inline uint16_t Endpoint_BytesInEndpoint(void) ATTR_WARN_UNUSED_RESULT ATTR_ALWAYS_INLINE;
 			static inline uint16_t Endpoint_BytesInEndpoint(void)
 			{
-				return (((uint16_t)(Endpoint_SelectedEndpointHandle->CNTH & ~USB_EP_ZLP_bm) << 8) | Endpoint_SelectedEndpointHandle->CNTL);
+				if (USB_Endpoint_SelectedEndpoint & ENDPOINT_DIR_IN)
+				  return USB_Endpoint_SelectedFIFO->Position;
+				else
+				  return (USB_Endpoint_SelectedFIFO->Length - USB_Endpoint_SelectedFIFO->Position);
 			}
 
 			/** Get the endpoint address of the currently selected endpoint. This is typically used to save
-			 *  the currently selected endpoint number so that it can be restored after another endpoint has
-			 *  been manipulated.
+			 *  the currently selected endpoint so that it can be restored after another endpoint has been
+			 *  manipulated.
 			 *
 			 *  \return Index of the currently selected endpoint.
 			 */
 			static inline uint8_t Endpoint_GetCurrentEndpoint(void) ATTR_WARN_UNUSED_RESULT ATTR_ALWAYS_INLINE;
 			static inline uint8_t Endpoint_GetCurrentEndpoint(void)
 			{
-				return Endpoint_SelectedEndpoint;
+				return USB_Endpoint_SelectedEndpoint;
 			}
 
 			/** Resets the endpoint bank FIFO. This clears all the endpoint banks and resets the USB controller's
 			 *  data In and Out pointers to the bank's contents.
 			 *
-			 *  \param[in] EndpointNumber Endpoint number whose FIFO buffers are to be reset.
+			 *  \param[in] Address  Endpoint address whose FIFO buffers are to be reset.
 			 */
-			static inline void Endpoint_ResetEndpoint(const uint8_t EndpointNumber) ATTR_ALWAYS_INLINE;
-			static inline void Endpoint_ResetEndpoint(const uint8_t EndpointNumber)
+			static inline void Endpoint_ResetEndpoint(const uint8_t Address) ATTR_ALWAYS_INLINE;
+			static inline void Endpoint_ResetEndpoint(const uint8_t Address)
 			{
-				// TODO
+				if (Address & ENDPOINT_DIR_IN)
+				  USB_Endpoint_FIFOs[Address & ENDPOINT_EPNUM_MASK].IN.Position  = 0;
+				else
+				  USB_Endpoint_FIFOs[Address & ENDPOINT_EPNUM_MASK].OUT.Position = 0;
 			}
 
 			/** Determines if the currently selected endpoint is enabled, but not necessarily configured.
@@ -349,7 +333,7 @@
 			 */
 			static inline void Endpoint_AbortPendingIN(void)
 			{
-				// TODO
+				USB_Endpoint_SelectedHandle->STATUS |= USB_EP_BUSNACK0_bm;
 			}
 
 			/** Determines if the currently selected endpoint may be read from (if data is waiting in the endpoint
@@ -366,7 +350,7 @@
 			static inline bool Endpoint_IsReadWriteAllowed(void) ATTR_WARN_UNUSED_RESULT ATTR_ALWAYS_INLINE;
 			static inline bool Endpoint_IsReadWriteAllowed(void)
 			{
-				return 0; // TODO
+				return (USB_Endpoint_SelectedFIFO->Position < USB_Endpoint_SelectedFIFO->Length);
 			}
 
 			/** Determines if the currently selected endpoint is configured.
@@ -376,32 +360,7 @@
 			static inline bool Endpoint_IsConfigured(void) ATTR_WARN_UNUSED_RESULT ATTR_ALWAYS_INLINE;
 			static inline bool Endpoint_IsConfigured(void)
 			{
-				return ((Endpoint_SelectedEndpointHandle->CTRL & USB_EP_TYPE_gm) ? true : false);
-			}
-
-			/** Returns a mask indicating which INTERRUPT type endpoints have interrupted - i.e. their
-			 *  interrupt duration has elapsed. Which endpoints have interrupted can be determined by
-			 *  masking the return value against <tt>(1 << <i>{Endpoint Number}</i>)</tt>.
-			 *
-			 *  \return Mask whose bits indicate which endpoints have interrupted.
-			 */
-			static inline uint8_t Endpoint_GetEndpointInterrupts(void) ATTR_WARN_UNUSED_RESULT ATTR_ALWAYS_INLINE;
-			static inline uint8_t Endpoint_GetEndpointInterrupts(void)
-			{
-				return 0; // TODO
-			}
-
-			/** Determines if the specified endpoint number has interrupted (valid only for INTERRUPT type
-			 *  endpoints).
-			 *
-			 *  \param[in] EndpointNumber  Index of the endpoint whose interrupt flag should be tested.
-			 *
-			 *  \return Boolean \c true if the specified endpoint has interrupted, \c false otherwise.
-			 */
-			static inline bool Endpoint_HasEndpointInterrupted(const uint8_t EndpointNumber) ATTR_WARN_UNUSED_RESULT ATTR_ALWAYS_INLINE;
-			static inline bool Endpoint_HasEndpointInterrupted(const uint8_t EndpointNumber)
-			{
-				return 0; // TODO
+				return ((USB_Endpoint_SelectedHandle->CTRL & USB_EP_TYPE_gm) ? true : false);
 			}
 
 			/** Determines if the selected IN endpoint is ready for a new packet to be sent to the host.
@@ -413,7 +372,9 @@
 			static inline bool Endpoint_IsINReady(void) ATTR_WARN_UNUSED_RESULT ATTR_ALWAYS_INLINE;
 			static inline bool Endpoint_IsINReady(void)
 			{
-				return (Endpoint_SelectedEndpointHandle->STATUS & USB_EP_TRNCOMPL0_bm);
+				Endpoint_SelectEndpoint(USB_Endpoint_SelectedEndpoint | ENDPOINT_DIR_IN);
+
+				return ((USB_Endpoint_SelectedHandle->STATUS & USB_EP_BUSNACK0_bm) ? true : false);
 			}
 
 			/** Determines if the selected OUT endpoint has received new packet from the host.
@@ -425,7 +386,15 @@
 			static inline bool Endpoint_IsOUTReceived(void) ATTR_WARN_UNUSED_RESULT ATTR_ALWAYS_INLINE;
 			static inline bool Endpoint_IsOUTReceived(void)
 			{
-				return (Endpoint_SelectedEndpointHandle->STATUS & USB_EP_TRNCOMPL0_bm);
+				Endpoint_SelectEndpoint(USB_Endpoint_SelectedEndpoint & ~ENDPOINT_DIR_IN);
+
+				if (USB_Endpoint_SelectedHandle->STATUS & USB_EP_TRNCOMPL0_bm)
+				{
+					USB_Endpoint_SelectedFIFO->Length = USB_Endpoint_SelectedHandle->CNT;
+					return true;
+				}
+
+				return false;
 			}
 
 			/** Determines if the current CONTROL type endpoint has received a SETUP packet.
@@ -437,7 +406,15 @@
 			static inline bool Endpoint_IsSETUPReceived(void) ATTR_WARN_UNUSED_RESULT ATTR_ALWAYS_INLINE;
 			static inline bool Endpoint_IsSETUPReceived(void)
 			{
-				return (Endpoint_SelectedEndpointHandle->STATUS & USB_EP_SETUP_bm);
+				Endpoint_SelectEndpoint(USB_Endpoint_SelectedEndpoint & ~ENDPOINT_DIR_IN);
+
+				if (USB_Endpoint_SelectedHandle->STATUS & USB_EP_SETUP_bm)
+				{
+					USB_Endpoint_SelectedFIFO->Length = USB_Endpoint_SelectedHandle->CNT;
+					return true;
+				}
+
+				return false;
 			}
 
 			/** Clears a received SETUP packet on the currently selected CONTROL type endpoint, freeing up the
@@ -450,7 +427,14 @@
 			static inline void Endpoint_ClearSETUP(void) ATTR_ALWAYS_INLINE;
 			static inline void Endpoint_ClearSETUP(void)
 			{
-				// TODO
+				Endpoint_SelectEndpoint(USB_Endpoint_SelectedEndpoint & ~ENDPOINT_DIR_IN);
+				USB_Endpoint_SelectedHandle->STATUS &= ~(USB_EP_SETUP_bm | USB_EP_TRNCOMPL0_bm | USB_EP_BUSNACK0_bm | USB_EP_OVF_bm);
+				USB_Endpoint_SelectedHandle->STATUS |= USB_EP_TOGGLE_bm;
+				USB_Endpoint_SelectedFIFO->Position  = 0;
+
+				Endpoint_SelectEndpoint(USB_Endpoint_SelectedEndpoint | ENDPOINT_DIR_IN);
+				USB_Endpoint_SelectedHandle->STATUS |= USB_EP_TOGGLE_bm;
+				USB_Endpoint_SelectedFIFO->Position  = 0;
 			}
 
 			/** Sends an IN packet to the host on the currently selected endpoint, freeing up the endpoint for the
@@ -461,7 +445,9 @@
 			static inline void Endpoint_ClearIN(void) ATTR_ALWAYS_INLINE;
 			static inline void Endpoint_ClearIN(void)
 			{
-				// TODO
+				USB_Endpoint_SelectedHandle->CNT     = USB_Endpoint_SelectedFIFO->Position;
+				USB_Endpoint_SelectedHandle->STATUS &= ~(USB_EP_TRNCOMPL0_bm | USB_EP_BUSNACK0_bm | USB_EP_OVF_bm);
+				USB_Endpoint_SelectedFIFO->Position  = 0;
 			}
 
 			/** Acknowledges an OUT packet to the host on the currently selected endpoint, freeing up the endpoint
@@ -472,7 +458,8 @@
 			static inline void Endpoint_ClearOUT(void) ATTR_ALWAYS_INLINE;
 			static inline void Endpoint_ClearOUT(void)
 			{
-				// TODO
+				USB_Endpoint_SelectedHandle->STATUS &= ~(USB_EP_TRNCOMPL0_bm | USB_EP_BUSNACK0_bm | USB_EP_OVF_bm);
+				USB_Endpoint_SelectedFIFO->Position  = 0;
 			}
 
 			/** Stalls the current endpoint, indicating to the host that a logical problem occurred with the
@@ -489,7 +476,13 @@
 			static inline void Endpoint_StallTransaction(void) ATTR_ALWAYS_INLINE;
 			static inline void Endpoint_StallTransaction(void)
 			{
-				Endpoint_SelectedEndpointHandle->CTRL |=  USB_EP_STALL_bm;
+				USB_Endpoint_SelectedHandle->CTRL |= USB_EP_STALL_bm;
+
+				if ((USB_Endpoint_SelectedHandle->CTRL & USB_EP_TYPE_gm) == USB_EP_TYPE_CONTROL_gc)
+				{
+					Endpoint_SelectEndpoint(USB_Endpoint_SelectedEndpoint ^ ENDPOINT_DIR_IN);
+					USB_Endpoint_SelectedHandle->CTRL |= USB_EP_STALL_bm;
+				}
 			}
 
 			/** Clears the STALL condition on the currently selected endpoint.
@@ -499,7 +492,7 @@
 			static inline void Endpoint_ClearStall(void) ATTR_ALWAYS_INLINE;
 			static inline void Endpoint_ClearStall(void)
 			{
-				Endpoint_SelectedEndpointHandle->CTRL &= ~USB_EP_STALL_bm;
+				USB_Endpoint_SelectedHandle->CTRL &= ~USB_EP_STALL_bm;
 			}
 
 			/** Determines if the currently selected endpoint is stalled, false otherwise.
@@ -511,14 +504,14 @@
 			static inline bool Endpoint_IsStalled(void) ATTR_WARN_UNUSED_RESULT ATTR_ALWAYS_INLINE;
 			static inline bool Endpoint_IsStalled(void)
 			{
-				return (Endpoint_SelectedEndpointHandle->CTRL & USB_EP_STALL_bm);
+				return ((USB_Endpoint_SelectedHandle->CTRL & USB_EP_STALL_bm) ? true : false);
 			}
 
 			/** Resets the data toggle of the currently selected endpoint. */
 			static inline void Endpoint_ResetDataToggle(void) ATTR_ALWAYS_INLINE;
 			static inline void Endpoint_ResetDataToggle(void)
 			{
-				Endpoint_SelectedEndpointHandle->STATUS &= ~USB_EP_TOGGLE_bm;
+				USB_Endpoint_SelectedHandle->STATUS &= ~USB_EP_TOGGLE_bm;
 			}
 
 			/** Determines the currently selected endpoint's direction.
@@ -528,17 +521,7 @@
 			static inline uint8_t Endpoint_GetEndpointDirection(void) ATTR_WARN_UNUSED_RESULT ATTR_ALWAYS_INLINE;
 			static inline uint8_t Endpoint_GetEndpointDirection(void)
 			{
-				return 0; // TODO
-			}
-
-			/** Sets the direction of the currently selected endpoint.
-			 *
-			 *  \param[in] DirectionMask  New endpoint direction, as a \c ENDPOINT_DIR_* mask.
-			 */
-			static inline void Endpoint_SetEndpointDirection(const uint8_t DirectionMask) ATTR_ALWAYS_INLINE;
-			static inline void Endpoint_SetEndpointDirection(const uint8_t DirectionMask)
-			{
-				// TODO
+				return (USB_Endpoint_SelectedEndpoint & ENDPOINT_DIR_IN);
 			}
 
 			/** Reads one byte from the currently selected endpoint's bank, for OUT direction endpoints.
@@ -550,7 +533,7 @@
 			static inline uint8_t Endpoint_Read_8(void) ATTR_WARN_UNUSED_RESULT ATTR_ALWAYS_INLINE;
 			static inline uint8_t Endpoint_Read_8(void)
 			{
-				return 0; // TODO
+				return USB_Endpoint_SelectedFIFO->Data[USB_Endpoint_SelectedFIFO->Position++];
 			}
 
 			/** Writes one byte to the currently selected endpoint's bank, for IN direction endpoints.
@@ -562,7 +545,7 @@
 			static inline void Endpoint_Write_8(const uint8_t Data) ATTR_ALWAYS_INLINE;
 			static inline void Endpoint_Write_8(const uint8_t Data)
 			{
-				// TODO
+				USB_Endpoint_SelectedFIFO->Data[USB_Endpoint_SelectedFIFO->Position++] = Data;
 			}
 
 			/** Discards one byte from the currently selected endpoint's bank, for OUT direction endpoints.
@@ -572,7 +555,7 @@
 			static inline void Endpoint_Discard_8(void) ATTR_ALWAYS_INLINE;
 			static inline void Endpoint_Discard_8(void)
 			{
-				// TODO
+				USB_Endpoint_SelectedFIFO->Position++;
 			}
 
 			/** Reads two bytes from the currently selected endpoint's bank in little endian format, for OUT
@@ -585,7 +568,10 @@
 			static inline uint16_t Endpoint_Read_16_LE(void) ATTR_WARN_UNUSED_RESULT ATTR_ALWAYS_INLINE;
 			static inline uint16_t Endpoint_Read_16_LE(void)
 			{
-				return 0; // TODO
+				uint16_t Byte0 = Endpoint_Read_8();
+				uint16_t Byte1 = Endpoint_Read_8();
+
+				return ((Byte1 << 8) | Byte0);
 			}
 
 			/** Reads two bytes from the currently selected endpoint's bank in big endian format, for OUT
@@ -598,7 +584,10 @@
 			static inline uint16_t Endpoint_Read_16_BE(void) ATTR_WARN_UNUSED_RESULT ATTR_ALWAYS_INLINE;
 			static inline uint16_t Endpoint_Read_16_BE(void)
 			{
-				return 0; // TODO
+				uint16_t Byte0 = Endpoint_Read_8();
+				uint16_t Byte1 = Endpoint_Read_8();
+
+				return ((Byte0 << 8) | Byte1);
 			}
 
 			/** Writes two bytes to the currently selected endpoint's bank in little endian format, for IN
@@ -611,7 +600,8 @@
 			static inline void Endpoint_Write_16_LE(const uint16_t Data) ATTR_ALWAYS_INLINE;
 			static inline void Endpoint_Write_16_LE(const uint16_t Data)
 			{
-				// TODO
+				Endpoint_Write_8(Data & 0xFF);
+				Endpoint_Write_8(Data >> 8);
 			}
 
 			/** Writes two bytes to the currently selected endpoint's bank in big endian format, for IN
@@ -624,7 +614,8 @@
 			static inline void Endpoint_Write_16_BE(const uint16_t Data) ATTR_ALWAYS_INLINE;
 			static inline void Endpoint_Write_16_BE(const uint16_t Data)
 			{
-				// TODO
+				Endpoint_Write_8(Data >> 8);
+				Endpoint_Write_8(Data & 0xFF);
 			}
 
 			/** Discards two bytes from the currently selected endpoint's bank, for OUT direction endpoints.
@@ -634,7 +625,8 @@
 			static inline void Endpoint_Discard_16(void) ATTR_ALWAYS_INLINE;
 			static inline void Endpoint_Discard_16(void)
 			{
-				// TODO
+				Endpoint_Discard_8();
+				Endpoint_Discard_8();
 			}
 
 			/** Reads four bytes from the currently selected endpoint's bank in little endian format, for OUT
@@ -647,7 +639,12 @@
 			static inline uint32_t Endpoint_Read_32_LE(void) ATTR_WARN_UNUSED_RESULT ATTR_ALWAYS_INLINE;
 			static inline uint32_t Endpoint_Read_32_LE(void)
 			{
-				return 0; // TODO
+				uint32_t Byte0 = Endpoint_Read_8();
+				uint32_t Byte1 = Endpoint_Read_8();
+				uint32_t Byte2 = Endpoint_Read_8();
+				uint32_t Byte3 = Endpoint_Read_8();
+
+				return ((Byte3 << 24) | (Byte2 << 16) | (Byte1 << 8) | Byte0);
 			}
 
 			/** Reads four bytes from the currently selected endpoint's bank in big endian format, for OUT
@@ -660,7 +657,12 @@
 			static inline uint32_t Endpoint_Read_32_BE(void) ATTR_WARN_UNUSED_RESULT ATTR_ALWAYS_INLINE;
 			static inline uint32_t Endpoint_Read_32_BE(void)
 			{
-				return 0; // TODO
+				uint32_t Byte0 = Endpoint_Read_8();
+				uint32_t Byte1 = Endpoint_Read_8();
+				uint32_t Byte2 = Endpoint_Read_8();
+				uint32_t Byte3 = Endpoint_Read_8();
+
+				return ((Byte0 << 24) | (Byte1 << 16) | (Byte2 << 8) | Byte3);
 			}
 
 			/** Writes four bytes to the currently selected endpoint's bank in little endian format, for IN
@@ -673,7 +675,10 @@
 			static inline void Endpoint_Write_32_LE(const uint32_t Data) ATTR_ALWAYS_INLINE;
 			static inline void Endpoint_Write_32_LE(const uint32_t Data)
 			{
-				// TODO
+				Endpoint_Write_8(Data & 0xFF);
+				Endpoint_Write_8(Data >> 8);
+				Endpoint_Write_8(Data >> 16);
+				Endpoint_Write_8(Data >> 24);
 			}
 
 			/** Writes four bytes to the currently selected endpoint's bank in big endian format, for IN
@@ -686,7 +691,10 @@
 			static inline void Endpoint_Write_32_BE(const uint32_t Data) ATTR_ALWAYS_INLINE;
 			static inline void Endpoint_Write_32_BE(const uint32_t Data)
 			{
-				// TODO
+				Endpoint_Write_8(Data >> 24);
+				Endpoint_Write_8(Data >> 16);
+				Endpoint_Write_8(Data >> 8);
+				Endpoint_Write_8(Data & 0xFF);
 			}
 
 			/** Discards four bytes from the currently selected endpoint's bank, for OUT direction endpoints.
@@ -696,7 +704,10 @@
 			static inline void Endpoint_Discard_32(void) ATTR_ALWAYS_INLINE;
 			static inline void Endpoint_Discard_32(void)
 			{
-				// TODO
+				Endpoint_Discard_8();
+				Endpoint_Discard_8();
+				Endpoint_Discard_8();
+				Endpoint_Discard_8();
 			}
 
 		/* External Variables: */
@@ -712,8 +723,8 @@
 			 *  \c FIXED_CONTROL_ENDPOINT_SIZE token - it is recommended that the \c FIXED_CONTROL_ENDPOINT_SIZE token
 			 *  be used in the device descriptors to ensure this.
 			 *
-			 *  \note This variable should be treated as read-only in the user application, and never manually
-			 *        changed in value.
+			 *  \attention This variable should be treated as read-only in the user application, and never manually
+			 *             changed in value.
 			 */
 			#if (!defined(FIXED_CONTROL_ENDPOINT_SIZE) || defined(__DOXYGEN__))
 				extern uint8_t USB_Device_ControlEndpointSize;
@@ -722,9 +733,25 @@
 			#endif
 
 		/* Function Prototypes: */
+			/** Configures a table of endpoint descriptions, in sequence. This function can be used to configure multiple
+			 *  endpoints at the same time.
+			 *
+			 *  \note Endpoints with a zero address will be ignored, thus this function cannot be used to configure the
+			 *        control endpoint.
+			 *
+			 *  \param[in] Table    Pointer to a table of endpoint descriptions.
+			 *  \param[in] Entries  Number of entries in the endpoint table to configure.
+			 *
+			 *  \return Boolean \c true if all endpoints configured successfully, \c false otherwise.
+			 */
+			bool Endpoint_ConfigureEndpointTable(const USB_Endpoint_Table_t* const Table,
+			                                     const uint8_t Entries);
+
 			/** Completes the status stage of a control transfer on a CONTROL type endpoint automatically,
 			 *  with respect to the data direction. This is a convenience function which can be used to
 			 *  simplify user control request handling.
+			 *
+			 *  \note This routine should not be called on non CONTROL type endpoints.
 			 */
 			void Endpoint_ClearStatusStage(void);
 

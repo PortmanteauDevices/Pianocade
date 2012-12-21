@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -28,6 +28,9 @@
   this software.
 */
 
+#include "../../../../Common/Common.h"
+#if (ARCH == ARCH_AVR8)
+
 #define  __INCLUDE_FROM_USB_DRIVER
 #include "../USBMode.h"
 
@@ -37,26 +40,51 @@
 
 uint8_t USB_Host_ControlPipeSize = PIPE_CONTROLPIPE_DEFAULT_SIZE;
 
-bool Pipe_ConfigurePipe(const uint8_t Number,
+bool Pipe_ConfigurePipeTable(const USB_Pipe_Table_t* const Table,
+                             const uint8_t Entries)
+{
+	for (uint8_t i = 0; i < Entries; i++)
+	{
+		if (!(Table[i].Address))
+		  continue;
+	
+		if (!(Pipe_ConfigurePipe(Table[i].Address, Table[i].Type, Table[i].EndpointAddress, Table[i].Size, Table[i].Banks)))
+		{
+			return false;
+		}
+	}
+	
+	return true;
+}
+
+bool Pipe_ConfigurePipe(const uint8_t Address,
                         const uint8_t Type,
-                        const uint8_t Token,
-                        const uint8_t EndpointNumber,
+                        const uint8_t EndpointAddress,
                         const uint16_t Size,
                         const uint8_t Banks)
 {
+	uint8_t Number = (Address & PIPE_EPNUM_MASK);
+	uint8_t Token  = (Address & PIPE_DIR_IN) ? PIPE_TOKEN_IN : PIPE_TOKEN_OUT;
+	
+	if (Number >= PIPE_TOTAL_PIPES)
+	  return false;
+
+	if (Type == EP_TYPE_CONTROL)
+	  Token = PIPE_TOKEN_SETUP;
+
 #if defined(ORDERED_EP_CONFIG)
 	Pipe_SelectPipe(Number);
 	Pipe_EnablePipe();
 
 	UPCFG1X = 0;
 
-	UPCFG0X = ((Type << EPTYPE0) | Token | ((EndpointNumber & PIPE_EPNUM_MASK) << PEPNUM0));
-	UPCFG1X = ((1 << ALLOC) | Banks | Pipe_BytesToEPSizeMask(Size));
+	UPCFG0X = ((Type << EPTYPE0) | Token | ((EndpointAddress & PIPE_EPNUM_MASK) << PEPNUM0));
+	UPCFG1X = ((1 << ALLOC) | ((Banks > 1) ? (1 << EPBK0) : 0) | Pipe_BytesToEPSizeMask(Size));
 
 	Pipe_SetInfiniteINRequests();
 
 	return Pipe_IsConfigured();
-#else	
+#else
 	for (uint8_t PNum = Number; PNum < PIPE_TOTAL_PIPES; PNum++)
 	{
 		uint8_t UPCFG0XTemp;
@@ -65,10 +93,10 @@ bool Pipe_ConfigurePipe(const uint8_t Number,
 		uint8_t UPIENXTemp;
 
 		Pipe_SelectPipe(PNum);
-		
+
 		if (PNum == Number)
 		{
-			UPCFG0XTemp = ((Type << EPTYPE0) | Token | ((EndpointNumber & PIPE_EPNUM_MASK) << PEPNUM0));
+			UPCFG0XTemp = ((Type << EPTYPE0) | Token | ((EndpointAddress & PIPE_EPNUM_MASK) << PEPNUM0));
 			UPCFG1XTemp = ((1 << ALLOC) | Banks | Pipe_BytesToEPSizeMask(Size));
 			UPCFG2XTemp = 0;
 			UPIENXTemp  = 0;
@@ -83,7 +111,7 @@ bool Pipe_ConfigurePipe(const uint8_t Number,
 
 		if (!(UPCFG1XTemp & (1 << ALLOC)))
 		  continue;
-		  
+
 		Pipe_DisablePipe();
 		UPCFG1X &= ~(1 << ALLOC);
 
@@ -94,12 +122,12 @@ bool Pipe_ConfigurePipe(const uint8_t Number,
 		UPIENX  = UPIENXTemp;
 
 		Pipe_SetInfiniteINRequests();
-	
+
 		if (!(Pipe_IsConfigured()))
-		  return false;		
+		  return false;
 	}
-		
-	Pipe_SelectPipe(Number);	
+
+	Pipe_SelectPipe(Number);
 	return true;
 #endif
 }
@@ -179,3 +207,4 @@ uint8_t Pipe_WaitUntilReady(void)
 
 #endif
 
+#endif
