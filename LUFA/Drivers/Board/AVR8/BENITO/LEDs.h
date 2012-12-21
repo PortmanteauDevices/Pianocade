@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -41,6 +41,12 @@
  *  \brief Board specific LED driver header for the Tempusdictum Benito.
  *
  *  Board specific LED driver header for the Tempusdictum Benito (http://dorkbotpdx.org/wiki/benito).
+ *
+ *  <table>
+ *    <tr><th>Name</th><th>Color</th><th>Info</th><th>Active Level</th><th>Port Pin</th></tr>
+ *    <tr><td>LEDS_LED1</td><td>Green</td><td>TX LED</td><td>Low</td><td>PORTC.7</td></tr>
+ *    <tr><td>LEDS_LED2</td><td>Red</td><td>RX LED</td><td>Low</td><td>PORTC.6</td></tr>
+ *  </table>
  *
  *  @{
  */
@@ -83,6 +89,12 @@
 				PORTC |= LEDS_ALL_LEDS;
 			}
 
+			static inline void LEDs_Disable(void)
+			{
+				DDRC  &= ~LEDS_ALL_LEDS;
+				PORTC &= ~LEDS_ALL_LEDS;
+			}
+
 			static inline void LEDs_TurnOnLEDs(const uint8_t LEDMask)
 			{
 				PORTC &= ~LEDMask;
@@ -106,7 +118,7 @@
 
 			static inline void LEDs_ToggleLEDs(const uint8_t LEDMask)
 			{
-				PORTC ^= LEDMask;
+				PINC  = LEDMask;
 			}
 
 			static inline uint8_t LEDs_GetLEDs(void) ATTR_WARN_UNUSED_RESULT;

@@ -1,18 +1,18 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
-              
+     Copyright (C) Dean Camera, 2012.
+
   dean [at] fourwalledcubicle [dot] com
-      www.fourwalledcubicle.com
+           www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
-  Permission to use, copy, modify, and distribute this software
-  and its documentation for any purpose and without fee is hereby
-  granted, provided that the above copyright notice appear in all
-  copies and that both that the copyright notice and this
+  Permission to use, copy, modify, distribute, and sell this
+  software and its documentation for any purpose is hereby granted
+  without fee, provided that the above copyright notice appear in
+  all copies and that both that the copyright notice and this
   permission notice and warranty disclaimer appear in supporting
   documentation, and that the name of the author not be used in
   advertising or publicity pertaining to distribution of the
@@ -42,9 +42,15 @@
  *
  *  Board specific Buttons driver header for the Atmel EVK1101.
  *
+ *  <table>
+ *    <tr><th>Name</th><th>Info</th><th>Active Level</th><th>Port Pin</th></tr>
+ *    <tr><td>BUTTONS_BUTTON1</td><td>SW0 Button</td><td>Low</td><td>GPIO34</td></tr>
+ *    <tr><td>BUTTONS_BUTTON2</td><td>SW1 Button</td><td>Low</td><td>GPIO35</td></tr>
+ *  </table>
+ *
  *  @{
  */
- 
+
 #ifndef __BUTTONS_EVK1101_H__
 #define __BUTTONS_EVK1101_H__
 
@@ -60,7 +66,7 @@
 		#if !defined(__INCLUDE_FROM_BUTTONS_H)
 			#error Do not include this file directly. Include LUFA/Drivers/Board/Buttons.h instead.
 		#endif
-		
+
 	/* Private Interface - For use in library only: */
 	#if !defined(__DOXYGEN__)
 		/* Macros: */
@@ -83,10 +89,16 @@
 				AVR32_GPIO.port[BUTTONS_PORT].puers = (BUTTONS_BUTTON1 | BUTTONS_BUTTON2);
 			}
 
+			static inline void Buttons_Disable(void)
+			{
+				AVR32_GPIO.port[BUTTONS_PORT].gperc = (BUTTONS_BUTTON1 | BUTTONS_BUTTON2);
+				AVR32_GPIO.port[BUTTONS_PORT].puerc = (BUTTONS_BUTTON1 | BUTTONS_BUTTON2);
+			}
+
 			static inline uint32_t Buttons_GetStatus(void) ATTR_WARN_UNUSED_RESULT;
 			static inline uint32_t Buttons_GetStatus(void)
 			{
-				return (~(AVR32_GPIO.port[JOY_MOVE_PORT].pvr & (BUTTONS_BUTTON1 | BUTTONS_BUTTON2)));
+				return (~(AVR32_GPIO.port[BUTTONS_PORT].pvr & (BUTTONS_BUTTON1 | BUTTONS_BUTTON2)));
 			}
 		#endif
 
@@ -94,7 +106,8 @@
 		#if defined(__cplusplus)
 			}
 		#endif
-			
+
 #endif
 
 /** @} */
+

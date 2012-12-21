@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -28,6 +28,9 @@
   this software.
 */
 
+#include "../../../../Common/Common.h"
+#if (ARCH == ARCH_UC3)
+
 #define  __INCLUDE_FROM_USB_DRIVER
 #include "../USBMode.h"
 
@@ -37,16 +40,43 @@
 
 uint8_t USB_Host_ControlPipeSize = PIPE_CONTROLPIPE_DEFAULT_SIZE;
 
-volatile uint32_t USB_SelectedPipe = PIPE_CONTROLPIPE;
-volatile uint8_t* USB_PipeFIFOPos[PIPE_TOTAL_PIPES];
+volatile uint32_t USB_Pipe_SelectedPipe = PIPE_CONTROLPIPE;
+volatile uint8_t* USB_Pipe_FIFOPos[PIPE_TOTAL_PIPES];
 
-bool Pipe_ConfigurePipe(const uint8_t Number,
+bool Pipe_ConfigurePipeTable(const USB_Pipe_Table_t* const Table,
+                             const uint8_t Entries)
+{
+	for (uint8_t i = 0; i < Entries; i++)
+	{
+		if (!(Table[i].Address))
+		  continue;
+	
+		if (!(Pipe_ConfigurePipe(Table[i].Address, Table[i].Type, Table[i].EndpointAddress, Table[i].Size, Table[i].Banks)))
+		{
+			return false;
+		}
+	}
+	
+	return true;
+}
+
+bool Pipe_ConfigurePipe(const uint8_t Address,
                         const uint8_t Type,
-                        const uint8_t Token,
-                        const uint8_t EndpointNumber,
+                        const uint8_t EndpointAddress,
                         const uint16_t Size,
                         const uint8_t Banks)
 {
+	uint8_t Number = (Address & PIPE_EPNUM_MASK);
+	uint8_t Token  = (Address & PIPE_DIR_IN) ? PIPE_TOKEN_IN : PIPE_TOKEN_OUT;
+	
+	if (Number >= PIPE_TOTAL_PIPES)
+	  return false;
+
+	if (Type == EP_TYPE_CONTROL)
+	  Token = PIPE_TOKEN_SETUP;
+
+	USB_Pipe_FIFOPos[Number]     = &AVR32_USBB_SLAVE[Number * PIPE_HSB_ADDRESS_SPACE_SIZE];
+
 #if defined(ORDERED_EP_CONFIG)
 	Pipe_SelectPipe(Number);
 	Pipe_EnablePipe();
@@ -55,9 +85,9 @@ bool Pipe_ConfigurePipe(const uint8_t Number,
 	(&AVR32_USBB.upcfg0)[Number] = (AVR32_USBB_ALLOC_MASK |
 	                                ((uint32_t)Type  << AVR32_USBB_PTYPE_OFFSET)  |
 	                                ((uint32_t)Token << AVR32_USBB_PTOKEN_OFFSET) |
-	                                ((uint32_t)Banks << AVR32_USBB_PBK_OFFSET)    |
-	                                ((EndpointNumber & PIPE_EPNUM_MASK) << AVR32_USBB_PEPNUM_OFFSET));
-	USB_PipeFIFOPos[Number]      = &AVR32_USBB_SLAVE[Number * 0x10000];
+	                                ((Banks > 1) ? AVR32_USBB_PBK_MASK : 0)       |
+	                                Pipe_BytesToEPSizeMask(Size) |
+	                                ((uint32_t)Number << AVR32_USBB_PEPNUM_OFFSET));
 
 	Pipe_SetInfiniteINRequests();
 
@@ -65,26 +95,27 @@ bool Pipe_ConfigurePipe(const uint8_t Number,
 #else
 	for (uint8_t PNum = Number; PNum < PIPE_TOTAL_PIPES; PNum++)
 	{
-		uint8_t UPCFG0Temp;
+		uint32_t UPCFG0Temp;
 
 		Pipe_SelectPipe(PNum);
-		
+
 		if (PNum == Number)
 		{
 			UPCFG0Temp = (AVR32_USBB_ALLOC_MASK |
 			              ((uint32_t)Type  << AVR32_USBB_PTYPE_OFFSET)  |
 			              ((uint32_t)Token << AVR32_USBB_PTOKEN_OFFSET) |
-			              ((uint32_t)Banks << AVR32_USBB_PBK_OFFSET)    |
-			              ((EndpointNumber & PIPE_EPNUM_MASK) << AVR32_USBB_PEPNUM_OFFSET));
+			              ((Banks > 1) ? AVR32_USBB_PBK_MASK : 0)       |
+			              Pipe_BytesToEPSizeMask(Size) |
+			              ((EndpointAddress & PIPE_EPNUM_MASK) << AVR32_USBB_PEPNUM_OFFSET));
 		}
 		else
 		{
-			UPCFG0Temp = (&AVR32_USBB.upcfg0)[PNum]
+			UPCFG0Temp = (&AVR32_USBB.upcfg0)[PNum];
 		}
 
 		if (!(UPCFG0Temp & AVR32_USBB_ALLOC_MASK))
 		  continue;
-		  
+
 		Pipe_DisablePipe();
 		(&AVR32_USBB.upcfg0)[PNum] &= ~AVR32_USBB_ALLOC_MASK;
 
@@ -92,12 +123,12 @@ bool Pipe_ConfigurePipe(const uint8_t Number,
 		(&AVR32_USBB.upcfg0)[PNum] = UPCFG0Temp;
 
 		Pipe_SetInfiniteINRequests();
-	
+
 		if (!(Pipe_IsConfigured()))
-		  return false;		
+		  return false;
 	}
-		
-	Pipe_SelectPipe(Number);	
+
+	Pipe_SelectPipe(Number);
 	return true;
 #endif
 }
@@ -109,7 +140,7 @@ void Pipe_ClearPipes(void)
 		Pipe_SelectPipe(PNum);
 		(&AVR32_USBB.upcfg0)[PNum]    = 0;
 		(&AVR32_USBB.upcon0clr)[PNum] = -1;
-		USB_PipeFIFOPos[PNum]         = &AVR32_USBB_SLAVE[PNum * 0x10000];
+		USB_Pipe_FIFOPos[PNum]        = &AVR32_USBB_SLAVE[PNum * 0x10000];
 		Pipe_DisablePipe();
 	}
 }
@@ -175,3 +206,4 @@ uint8_t Pipe_WaitUntilReady(void)
 
 #endif
 
+#endif

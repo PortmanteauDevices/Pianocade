@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -27,6 +27,9 @@
   arising out of or in connection with the use or performance of
   this software.
 */
+
+#include "../../../../Common/Common.h"
+#if (ARCH == ARCH_UC3)
 
 #define  __INCLUDE_FROM_USB_DRIVER
 #define  __INCLUDE_FROM_USB_CONTROLLER_C
@@ -59,7 +62,7 @@ void USB_Init(
 	#if !defined(USE_STATIC_OPTIONS)
 	USB_Options = Options;
 	#endif
-	
+
 	#if defined(USB_CAN_BE_BOTH)
 	if (Mode == USB_MODE_UID)
 	{
@@ -73,7 +76,7 @@ void USB_Init(
 		USB_CurrentMode = Mode;
 	}
 	#else
-	AVR32_USBB.USBCON.uide = false;	
+	AVR32_USBB.USBCON.uide = false;
 	#endif
 
 	USB_IsInitialized = true;
@@ -109,7 +112,7 @@ void USB_ResetInterface(void)
 	AVR32_PM.GCCTRL[AVR32_PM_GCLK_USBB].pllsel = !(USB_Options & USB_OPT_GCLK_SRC_OSC);
 	AVR32_PM.GCCTRL[AVR32_PM_GCLK_USBB].oscsel = !(USB_Options & USB_OPT_GCLK_CHANNEL_0);
 	AVR32_PM.GCCTRL[AVR32_PM_GCLK_USBB].diven  = (F_USB != USB_CLOCK_REQUIRED_FREQ);
-	AVR32_PM.GCCTRL[AVR32_PM_GCLK_USBB].div    = (F_USB == USB_CLOCK_REQUIRED_FREQ) ? 0 : (uint32_t)(((F_USB / USB_CLOCK_REQUIRED_FREQ) - 1) / 2);
+	AVR32_PM.GCCTRL[AVR32_PM_GCLK_USBB].div    = (F_USB == USB_CLOCK_REQUIRED_FREQ) ? 0 : (uint32_t)((F_USB / USB_CLOCK_REQUIRED_FREQ / 2) - 1);
 	AVR32_PM.GCCTRL[AVR32_PM_GCLK_USBB].cen    = true;
 
 	USB_INT_DisableAllInterrupts();
@@ -134,6 +137,10 @@ void USB_ResetInterface(void)
 	}
 	else if (USB_CurrentMode == USB_MODE_Host)
 	{
+		#if defined(INVERTED_VBUS_ENABLE_LINE)
+		AVR32_USBB.USBCON.vbuspo = true;
+		#endif
+		
 		#if defined(USB_CAN_BE_HOST)
 		AVR32_USBB.USBCON.uimod = false;
 
@@ -172,20 +179,19 @@ static void USB_Init_Device(void)
 	else
 	{
 		#if defined(USB_DEVICE_OPT_HIGHSPEED)
-		if (USB_Options & USB_DEVICE_OPT_HIGHSPEED)	
+		if (USB_Options & USB_DEVICE_OPT_HIGHSPEED)
 		  USB_Device_SetHighSpeed();
 		else
 		  USB_Device_SetFullSpeed();
 		#else
 		USB_Device_SetFullSpeed();
-		#endif		
+		#endif
 	}
 
 	USB_INT_Enable(USB_INT_VBUSTI);
 
 	Endpoint_ConfigureEndpoint(ENDPOINT_CONTROLEP, EP_TYPE_CONTROL,
-							   ENDPOINT_DIR_OUT, USB_Device_ControlEndpointSize,
-							   ENDPOINT_BANK_SINGLE);
+							   USB_Device_ControlEndpointSize, 1);
 
 	USB_INT_Clear(USB_INT_SUSPI);
 	USB_INT_Enable(USB_INT_SUSPI);
@@ -213,3 +219,4 @@ static void USB_Init_Host(void)
 }
 #endif
 
+#endif

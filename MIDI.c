@@ -1,22 +1,26 @@
 #include "MIDI.h"
 
 USB_ClassInfo_MIDI_Device_t Keyboard_MIDI_Interface =
-    {
-        .Config =
-            {
-                .StreamingInterfaceNumber = 1,
+	{
+		.Config =
+			{
+				.StreamingInterfaceNumber = 1,
+				.DataINEndpoint           =
+					{
+						.Address          = MIDI_STREAM_IN_EPADDR,
+						.Size             = MIDI_STREAM_EPSIZE,
+						.Banks            = 1,
+					},
+				.DataOUTEndpoint           =
+					{
+						.Address          = MIDI_STREAM_OUT_EPADDR,
+						.Size             = MIDI_STREAM_EPSIZE,
+						.Banks            = 1,
+					},
+			},
+	};
 
-                .DataINEndpointNumber      = MIDI_STREAM_IN_EPNUM,
-                .DataINEndpointSize        = MIDI_STREAM_EPSIZE,
-                .DataINEndpointDoubleBank  = false,
-
-                .DataOUTEndpointNumber     = MIDI_STREAM_OUT_EPNUM,
-                .DataOUTEndpointSize       = MIDI_STREAM_EPSIZE,
-                .DataOUTEndpointDoubleBank = false,
-            },
-    };
-
-uint16_t midi_notes[10] = {0,0,0,0,0,0,0,0,0,0};
+uint16_t midi_notes[OCTAVE_TOTAL] = {0};
 uint8_t midi_changed = 0;
 uint8_t midi_new = 0;
 uint8_t midi_hasnotes = 0;
@@ -29,6 +33,10 @@ uint8_t midi_tick = 0;
 uint8_t midi_clock_flag = 0;
 uint8_t midi_tempo = 6;
 
+uint8_t midi_sysex_buffer[MIDI_SYSEX_BUFFER_SIZE] = {0};
+uint8_t midi_sysex_buffer_pointer = 0;
+uint8_t midi_sysex_flag = false;
+
 static uint8_t _cached_arp_output = 1;
 static uint8_t _omni = 1;
 static unsigned char _runningStatus = 0;
@@ -39,8 +47,7 @@ static inline void _tx(uint8_t MIDICommand, uint8_t MIDIPitch, uint8_t velocity)
     SerialPrint(velocity);
 
     MIDI_EventPacket_t MIDIEvent = (MIDI_EventPacket_t){
-        .CableNumber = 0,
-        .Command     = (MIDICommand >> 4),
+        .Event       = MIDI_EVENT(MIDICABLE, MIDICommand),
 
         .Data1       = MIDICommand | MIDICHANNEL,
         .Data2       = MIDIPitch,
@@ -64,11 +71,18 @@ static inline void _rx_USB(void){
     USB_USBTask();
 
     MIDI_EventPacket_t ReceivedMIDIEvent;
-    while (MIDI_Device_ReceiveEventPacket(&Keyboard_MIDI_Interface, &ReceivedMIDIEvent)){
-        unsigned char midiCommand = (ReceivedMIDIEvent.Command << 4);
-        // For anything other than SysEx messages, the following statement should be true
-        if(midiCommand != (ReceivedMIDIEvent.Data1 & MIDI_COMMAND_MASK)) continue;
+    while (MIDI_Device_ReceiveEventPacket(&Keyboard_MIDI_Interface, &ReceivedMIDIEvent)){      
+        unsigned char midiCommand = (ReceivedMIDIEvent.Event << 4);
+        
+        // Data bytes should NEVER have bit 7 set
+        if(((ReceivedMIDIEvent.Data2 || ReceivedMIDIEvent.Data3) & 0b10000000)
+            && !(midiCommand == 0x40 || midiCommand == 0x50 || midiCommand == 0x60 || midiCommand == 0x70)) continue;
 
+        // For anything other than SysEx messages, the following statement should be true
+        // so if it's not, do not process the message
+       if((midiCommand != (ReceivedMIDIEvent.Data1 & MIDI_COMMAND_MASK)) 
+        // and this one covers SysEx messages
+            && !(midiCommand == 0x40 || midiCommand == 0x50 || midiCommand == 0x60 || midiCommand == 0x70)) continue;
         // Immediately process MIDI realtime messages
         if((ReceivedMIDIEvent.Data1 >> 3) == 0b11111){
             switch(ReceivedMIDIEvent.Data1 & 0b111){
@@ -104,9 +118,8 @@ static inline void _rx_USB(void){
             continue; // No further processing needed
         };
 
-        unsigned char channel = (ReceivedMIDIEvent.Data1 & MIDI_CHANNEL_MASK);
-        if(ReceivedMIDIEvent.CableNumber == MIDICABLE){
-            _rx_processMIDIpacket(midiCommand, channel, ReceivedMIDIEvent.Data2, ReceivedMIDIEvent.Data3);
+        if((ReceivedMIDIEvent.Event >> 4) == MIDICABLE){
+            _rx_processMIDIpacket(midiCommand, ReceivedMIDIEvent.Data1, ReceivedMIDIEvent.Data2, ReceivedMIDIEvent.Data3);
         }
     }
 }
@@ -187,7 +200,7 @@ static inline void _rx_noteOff(unsigned char channel, unsigned char note){
         midi_changed = 1;
         midi_hasnotes = 0;
         midi_new = 0;
-        for(int octave_count = 0; octave_count < 10; ++octave_count){
+        for(int octave_count = 0; octave_count < OCTAVE_TOTAL; ++octave_count){
             if(midi_notes[octave_count]){
                 midi_hasnotes = 1;
                 break;
@@ -205,7 +218,7 @@ static inline void _rx_pitchWheel(unsigned char channel, unsigned char lsb, unsi
 static inline void _rx_controlChange(unsigned char channel, unsigned char data1, unsigned char data2){
     if(channel == MIDICHANNEL && data1 > 119){
         // Turn off all notes
-        memset(midi_notes, 0, 20);
+        memset(midi_notes, 0, 2*OCTAVE_TOTAL);
         midi_changed = 1;
         midi_hasnotes = 0;
         midi_new = 0;
@@ -240,10 +253,81 @@ static inline void _rx_controlChange(unsigned char channel, unsigned char data1,
     }
 }
 
+static inline void _rx_sysEx(unsigned char byte1, unsigned char byte2, unsigned char byte3){
+    if(midi_sysex_flag){
+        // Message has already started
+        _process_sysEx_byte(byte1);
+        _process_sysEx_byte(byte2);
+        _process_sysEx_byte(byte3);
+    } else {
+        if(byte1 == 0xF0){
+            midi_sysex_flag = true;
+            midi_sysex_buffer_pointer = 0;
+            _process_sysEx_byte(byte2);
+            _process_sysEx_byte(byte3);
+        } else {
+            // TODO this is an error state; do something intelligent
+        }
+    }
+}
+
+static inline void _process_sysEx_byte(unsigned char data){
+    if(midi_sysex_flag){
+        if(data == 0xF7){
+            // Message complete
+            midi_sysex_flag = false;
+            _complete_sysEx();
+        } else {
+            if(midi_sysex_buffer_pointer < MIDI_SYSEX_BUFFER_SIZE) {
+                midi_sysex_buffer[midi_sysex_buffer_pointer++] = data;
+            } else {
+                midi_sysex_flag = false;
+            }
+        }
+    }
+}
+
+static inline void _complete_sysEx(void){
+    int readIndex = 0;
+    if(midi_sysex_buffer_pointer == MIDI_SYSEX_BUFFER_SIZE
+        && midi_sysex_buffer[readIndex++] == MIDI_MANUFACTURER_ID0
+        && midi_sysex_buffer[readIndex++] == MIDI_MANUFACTURER_ID1
+        && midi_sysex_buffer[readIndex++] == MIDI_MANUFACTURER_ID2
+        && midi_sysex_buffer[readIndex++] == MIDI_SYSEX_VERSION
+        )
+    {
+        cli();
+        mute();
+        int bank = midi_sysex_buffer[readIndex++];
+        start_volume = midi_sysex_buffer[readIndex++] & 0b1111;
+        start_duty_cycle = midi_sysex_buffer[readIndex++] & 0b1111;
+
+        jump_flag = midi_sysex_buffer[readIndex++] & 0b1111;        
+        jump_on_release = midi_sysex_buffer[readIndex++] & 0b1111;
+
+        arp_mode = (midi_sysex_buffer[readIndex++] & 0b1111) % ARPMODES;
+        arp_speed = midi_sysex_buffer[readIndex++];
+        retrigger_flag = midi_sysex_buffer[readIndex++] & 0b1111;
+        
+        for(int i = 0; i < TABLE_SIZE; ++i){
+            uint8_t hinibble = (midi_sysex_buffer[readIndex++] << 4);
+            uint8_t lonibble = (midi_sysex_buffer[readIndex++] & 0b1111);
+            table[i] = ( hinibble | lonibble );
+        }
+
+
+        sei();
+        load_settings_ifPlaying();
+        if(bank) save_settings(bank - 1);
+    }
+}
+
 static inline void _rx_processMIDIpacket(unsigned char midiCommand, 
-                               unsigned char channel,
+                               unsigned char data0,
                                unsigned char data1,
                                unsigned char data2){
+                                   
+    unsigned char channel = (data0 & MIDI_CHANNEL_MASK);
     if(midiCommand == MIDI_STATUS_NOTEON){
         if(data2){
             _rx_noteOn(channel, data1, data2);
@@ -256,8 +340,9 @@ static inline void _rx_processMIDIpacket(unsigned char midiCommand,
         _rx_pitchWheel(channel, data1, data2);
     } else if(midiCommand == MIDI_STATUS_CONTROLCHANGE){
         _rx_controlChange(channel, data1, data2);
+    } else if(midiCommand == MIDI_SYSEX_START_OR_CONTINUE || midiCommand == 0x50 || midiCommand == 0x60 || midiCommand == 0x70){
+        _rx_sysEx(data0, data1, data2);
     }
-
 }
 
 void USBSetupHardware(void)

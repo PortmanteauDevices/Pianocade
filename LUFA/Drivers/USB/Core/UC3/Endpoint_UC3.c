@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -28,6 +28,9 @@
   this software.
 */
 
+#include "../../../../Common/Common.h"
+#if (ARCH == ARCH_UC3)
+
 #define  __INCLUDE_FROM_USB_DRIVER
 #include "../USBMode.h"
 
@@ -39,28 +42,46 @@
 uint8_t USB_Device_ControlEndpointSize = ENDPOINT_CONTROLEP_DEFAULT_SIZE;
 #endif
 
-volatile uint32_t USB_SelectedEndpoint = ENDPOINT_CONTROLEP;
-volatile uint8_t* USB_EndpointFIFOPos[ENDPOINT_TOTAL_ENDPOINTS];
+volatile uint32_t USB_Endpoint_SelectedEndpoint = ENDPOINT_CONTROLEP;
+volatile uint8_t* USB_Endpoint_FIFOPos[ENDPOINT_TOTAL_ENDPOINTS];
+
+bool Endpoint_ConfigureEndpointTable(const USB_Endpoint_Table_t* const Table,
+                                     const uint8_t Entries)
+{
+	for (uint8_t i = 0; i < Entries; i++)
+	{
+		if (!(Table[i].Address))
+		  continue;
+	
+		if (!(Endpoint_ConfigureEndpoint(Table[i].Address, Table[i].Type, Table[i].Size, Table[i].Banks)))
+		{
+			return false;
+		}
+	}
+	
+	return true;
+}
 
 bool Endpoint_ConfigureEndpoint_Prv(const uint8_t Number,
                                     const uint32_t UECFG0Data)
 {
+	USB_Endpoint_FIFOPos[Number] = &AVR32_USBB_SLAVE[Number * ENDPOINT_HSB_ADDRESS_SPACE_SIZE];
+
 #if defined(CONTROL_ONLY_DEVICE) || defined(ORDERED_EP_CONFIG)
 	Endpoint_SelectEndpoint(Number);
 	Endpoint_EnableEndpoint();
 
 	(&AVR32_USBB.uecfg0)[Number] = 0;
 	(&AVR32_USBB.uecfg0)[Number] = UECFG0Data;
-	USB_EndpointFIFOPos[Number]  = &AVR32_USBB_SLAVE[Number * 0x10000];
 
 	return Endpoint_IsConfigured();
 #else
 	for (uint8_t EPNum = Number; EPNum < ENDPOINT_TOTAL_ENDPOINTS; EPNum++)
 	{
-		uint8_t UECFG0Temp;
+		uint32_t UECFG0Temp;
 
 		Endpoint_SelectEndpoint(EPNum);
-		
+
 		if (EPNum == Number)
 		{
 			UECFG0Temp = UECFG0Data;
@@ -78,11 +99,11 @@ bool Endpoint_ConfigureEndpoint_Prv(const uint8_t Number,
 
 		Endpoint_EnableEndpoint();
 		(&AVR32_USBB.uecfg0)[EPNum] = UECFG0Temp;
-			
+
 		if (!(Endpoint_IsConfigured()))
-		  return false;			
+		  return false;
 	}
-	
+
 	Endpoint_SelectEndpoint(Number);
 	return true;
 #endif
@@ -95,7 +116,7 @@ void Endpoint_ClearEndpoints(void)
 		Endpoint_SelectEndpoint(EPNum);
 		(&AVR32_USBB.uecfg0)[EPNum]    = 0;
 		(&AVR32_USBB.uecon0clr)[EPNum] = -1;
-		USB_EndpointFIFOPos[EPNum]     = &AVR32_USBB_SLAVE[EPNum * 0x10000];
+		USB_Endpoint_FIFOPos[EPNum]    = &AVR32_USBB_SLAVE[EPNum * 0x10000];
 		Endpoint_DisableEndpoint();
 	}
 }
@@ -147,7 +168,7 @@ uint8_t Endpoint_WaitUntilReady(void)
 			if (Endpoint_IsOUTReceived())
 			  return ENDPOINT_READYWAIT_NoError;
 		}
-		
+
 		uint8_t USB_DeviceState_LCL = USB_DeviceState;
 
 		if (USB_DeviceState_LCL == DEVICE_STATE_Unattached)
@@ -172,3 +193,4 @@ uint8_t Endpoint_WaitUntilReady(void)
 
 #endif
 
+#endif

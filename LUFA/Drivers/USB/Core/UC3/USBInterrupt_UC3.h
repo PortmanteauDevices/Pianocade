@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -43,7 +43,6 @@
 
 	/* Includes: */
 		#include "../../../../Common/Common.h"
-		#include "../Endpoint.h"
 
 	/* Enable C linkage for C++ Compilers: */
 		#if defined(__cplusplus)
@@ -56,7 +55,10 @@
 		#endif
 
 	/* Private Interface - For use in library only: */
-	#if !defined(__DOXYGEN__)		
+	#if !defined(__DOXYGEN__)
+		/* External Variables: */
+			extern volatile uint32_t USB_Endpoint_SelectedEndpoint;
+
 		/* Enums: */
 			enum USB_Interrupts_t
 			{
@@ -71,7 +73,7 @@
 				USB_INT_SOFI    = 5,
 				USB_INT_RXSTPI  = 6,
 				#endif
-				#if (defined(USB_CAN_BE_HOST) || defined(__DOXYGEN__))			
+				#if (defined(USB_CAN_BE_HOST) || defined(__DOXYGEN__))
 				USB_INT_HSOFI   = 7,
 				USB_INT_DCONNI  = 8,
 				USB_INT_DDISCI  = 9,
@@ -80,11 +82,11 @@
 				USB_INT_VBERRI  = 12,
 				#endif
 			};
-		
+
 		/* Inline Functions: */
 			static inline void USB_INT_Enable(const uint8_t Interrupt) ATTR_ALWAYS_INLINE;
 			static inline void USB_INT_Enable(const uint8_t Interrupt)
-			{			
+			{
 				switch (Interrupt)
 				{
 					case USB_INT_VBUSTI:
@@ -109,7 +111,7 @@
 						AVR32_USBB.UDINTESET.sofes    = true;
 						break;
 					case USB_INT_RXSTPI:
-						(&AVR32_USBB.UECON0SET)[USB_SelectedEndpoint].rxstpes = true;
+						(&AVR32_USBB.UECON0SET)[USB_Endpoint_SelectedEndpoint].rxstpes = true;
 						break;
 					#endif
 					#if defined(USB_CAN_BE_HOST)
@@ -162,7 +164,7 @@
 						AVR32_USBB.UDINTECLR.sofec    = true;
 						break;
 					case USB_INT_RXSTPI:
-						(&AVR32_USBB.UECON0CLR)[USB_SelectedEndpoint].rxstpec = true;
+						(&AVR32_USBB.UECON0CLR)[USB_Endpoint_SelectedEndpoint].rxstpec = true;
 						break;
 					#endif
 					#if defined(USB_CAN_BE_HOST)
@@ -187,7 +189,7 @@
 					#endif
 				}
 			}
-			
+
 			static inline void USB_INT_Clear(const uint8_t Interrupt) ATTR_ALWAYS_INLINE;
 			static inline void USB_INT_Clear(const uint8_t Interrupt)
 			{
@@ -221,7 +223,7 @@
 						(void)AVR32_USBB.UDINTCLR;
 						break;
 					case USB_INT_RXSTPI:
-						(&AVR32_USBB.UESTA0CLR)[USB_SelectedEndpoint].rxstpic = true;
+						(&AVR32_USBB.UESTA0CLR)[USB_Endpoint_SelectedEndpoint].rxstpic = true;
 						break;
 					#endif
 					#if defined(USB_CAN_BE_HOST)
@@ -252,7 +254,7 @@
 					#endif
 				}
 			}
-			
+
 			static inline bool USB_INT_IsEnabled(const uint8_t Interrupt) ATTR_ALWAYS_INLINE ATTR_WARN_UNUSED_RESULT;
 			static inline bool USB_INT_IsEnabled(const uint8_t Interrupt)
 			{
@@ -274,9 +276,9 @@
 					case USB_INT_SOFI:
 						return AVR32_USBB.UDINTE.sofe;
 					case USB_INT_RXSTPI:
-						return (&AVR32_USBB.UECON0)[USB_SelectedEndpoint].rxstpe;
+						return (&AVR32_USBB.UECON0)[USB_Endpoint_SelectedEndpoint].rxstpe;
 					#endif
-					#if defined(USB_CAN_BE_HOST)					
+					#if defined(USB_CAN_BE_HOST)
 					case USB_INT_HSOFI:
 						return AVR32_USBB.UHINTE.hsofie;
 					case USB_INT_DCONNI:
@@ -291,10 +293,10 @@
 						return AVR32_USBB.USBCON.vberre;
 					#endif
 				}
-				
+
 				return false;
 			}
-		
+
 			static inline bool USB_INT_HasOccurred(const uint8_t Interrupt) ATTR_ALWAYS_INLINE ATTR_WARN_UNUSED_RESULT;
 			static inline bool USB_INT_HasOccurred(const uint8_t Interrupt)
 			{
@@ -316,7 +318,7 @@
 					case USB_INT_SOFI:
 						return AVR32_USBB.UDINT.sof;
 					case USB_INT_RXSTPI:
-						return (&AVR32_USBB.UESTA0)[USB_SelectedEndpoint].rxstpi;
+						return (&AVR32_USBB.UESTA0)[USB_Endpoint_SelectedEndpoint].rxstpi;
 					#endif
 					#if defined(USB_CAN_BE_HOST)
 					case USB_INT_HSOFI:
@@ -348,7 +350,7 @@
 	#endif
 
 	/* Public Interface - May be used in end-application: */
-		/* ISR Prototypes: */
+		/* Function Prototypes: */
 			#if defined(__DOXYGEN__)
 				/** Interrupt service routine handler for the USB controller ISR group. This interrupt routine <b>must</b> be
 				 *  linked to the entire USB controller ISR vector group inside the AVR32's interrupt controller peripheral,
@@ -358,7 +360,7 @@
 			#else
 				ISR(USB_GEN_vect);
 			#endif
-			
+
 	/* Disable C linkage for C++ Compilers: */
 		#if defined(__cplusplus)
 			}

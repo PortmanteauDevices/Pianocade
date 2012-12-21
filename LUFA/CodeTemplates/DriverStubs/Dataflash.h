@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -28,15 +28,17 @@
   this software.
 */
 
-/*
-   This is a stub driver header file, for implementing custom board
-   layout hardware with compatible LUFA board specific drivers. If
-   the library is configured to use the BOARD_USER board mode, this
-   driver file should be completed and copied into the "/Board/" folder
-   inside the application's folder.
-
-   This stub is for the board-specific component of the LUFA Dataflash
-   driver.
+/** \file
+ *  \brief LUFA Custom Board Dataflash Hardware Driver (Template)
+ *
+ *  This is a stub driver header file, for implementing custom board
+ *  layout hardware with compatible LUFA board specific drivers. If
+ *  the library is configured to use the BOARD_USER board mode, this
+ *  driver file should be completed and copied into the "/Board/" folder
+ *  inside the application's folder.
+ *
+ *  This stub is for the board-specific component of the LUFA Dataflash
+ *  driver.
 */
 
 #ifndef __DATAFLASH_USER_H__
@@ -86,6 +88,38 @@
 			{
 				DATAFLASH_CHIPCS_DDR  |= DATAFLASH_CHIPCS_MASK;
 				DATAFLASH_CHIPCS_PORT |= DATAFLASH_CHIPCS_MASK;
+			}
+
+			/** Sends a byte to the currently selected dataflash IC, and returns a byte from the dataflash.
+			 *
+			 *  \param[in] Byte  Byte of data to send to the dataflash
+			 *
+			 *  \return Last response byte from the dataflash
+			 */
+			static inline uint8_t Dataflash_TransferByte(const uint8_t Byte) ATTR_ALWAYS_INLINE;
+			static inline uint8_t Dataflash_TransferByte(const uint8_t Byte)
+			{
+				// TODO
+			}
+
+			/** Sends a byte to the currently selected dataflash IC, and ignores the next byte from the dataflash.
+			 *
+			 *  \param[in] Byte  Byte of data to send to the dataflash
+			 */
+			static inline void Dataflash_SendByte(const uint8_t Byte) ATTR_ALWAYS_INLINE;
+			static inline void Dataflash_SendByte(const uint8_t Byte)
+			{
+				// TODO
+			}
+
+			/** Sends a dummy byte to the currently selected dataflash IC, and returns the next byte from the dataflash.
+			 *
+			 *  \return Last response byte from the dataflash
+			 */
+			static inline uint8_t Dataflash_ReceiveByte(void) ATTR_ALWAYS_INLINE ATTR_WARN_UNUSED_RESULT;
+			static inline uint8_t Dataflash_ReceiveByte(void)
+			{
+				// TODO
 			}
 
 			/** Determines the currently selected dataflash chip.

@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -41,7 +41,7 @@
  *
  *  \section Sec_Dependencies Module Source Dependencies
  *  The following files must be built with any user project that uses this module:
- *    - LUFA/Drivers/USB/Core/ConfigDescriptor.c <i>(Makefile source module name: LUFA_SRC_USB)</i>
+ *    - LUFA/Drivers/USB/Core/ConfigDescriptors.c <i>(Makefile source module name: LUFA_SRC_USB)</i>
  *    - LUFA/Drivers/USB/Core/DeviceStandardReq.c <i>(Makefile source module name: LUFA_SRC_USB)</i>
  *    - LUFA/Drivers/USB/Core/Events.c <i>(Makefile source module name: LUFA_SRC_USB)</i>
  *    - LUFA/Drivers/USB/Core/HostStandardReq.c <i>(Makefile source module name: LUFA_SRC_USB)</i>
@@ -87,17 +87,22 @@
  *
  *  <table>
  *  <tr>
- *   <th width="100px">USB Class</th>
+ *   <th width="200px">USB Class</th>
  *   <th width="90px">Device Mode</th>
  *   <th width="90px">Host Mode</th>
  *  </tr>
  *  <tr>
- *   <td>Audio</td>
+ *   <td>Android Open Accessory</td>
+ *   <td bgcolor="#EE0000">No</td>
+ *   <td bgcolor="#00EE00">Yes</td>
+ *  </tr>
+ *  <tr>
+ *   <td>Audio 1.0</td>
  *   <td bgcolor="#00EE00">Yes</td>
  *   <td bgcolor="#00EE00">Yes</td>
  *  </tr>
  *  <tr>
- *   <td>CDC</td>
+ *   <td>CDC-ACM</td>
  *   <td bgcolor="#00EE00">Yes</td>
  *   <td bgcolor="#00EE00">Yes</td>
  *  </tr>
@@ -153,9 +158,6 @@
  *  before the class driver is used. Each Device mode Class driver typically contains a set of configuration parameters
  *  for the endpoint size/number of the associated logical USB interface, plus any class-specific configuration parameters.
  *
- *  The \c State section of the \c USB_ClassInfo_* structures are designed to be controlled by the Class Drivers only for
- *  maintaining the Class Driver instance's state, and should not normally be set by the user application.
- *
  *  The following is an example of a properly initialized instance of the Audio Class Driver structure:
  *
  *  \code
@@ -164,9 +166,12 @@
  *      .Config =
  *          {
  *              .StreamingInterfaceNumber = 1,
- *
- *              .DataINEndpointNumber     = 1,
- *              .DataINEndpointSize       = 256,
+ *              .DataINEndpoint           =
+ *                  {
+ *                      .Address          = (ENDPOINT_DIR_IN | 1),
+ *                      .Size             = 64,
+ *                      .Banks            = 1,
+ *                  },
  *          },
  *  };
  *  \endcode
@@ -183,10 +188,10 @@
  *  \code
  *  void EVENT_USB_Device_ConfigurationChanged(void)
  *  {
- *  	LEDs_SetAllLEDs(LEDMASK_USB_READY);
- *
- *  	if (!(Audio_Device_ConfigureEndpoints(&My_Audio_Interface)))
- *  	  LEDs_SetAllLEDs(LEDMASK_USB_ERROR);
+ *      LEDs_SetAllLEDs(LEDMASK_USB_READY);
+ *      
+ *      if (!(Audio_Device_ConfigureEndpoints(&My_Audio_Interface)))
+ *          LEDs_SetAllLEDs(LEDMASK_USB_ERROR);
  *  }
  *  \endcode
  *
@@ -200,13 +205,14 @@
  *  int main(void)
  *  {
  *      SetupHardware();
- *
+ *      
  *      LEDs_SetAllLEDs(LEDMASK_USB_NOTREADY);
- *
+ *      
  *      for (;;)
  *      {
- *          Create_And_Process_Samples();
- *
+ *          if (USB_DeviceState != DEVICE_STATE_Configured)
+ *            Create_And_Process_Samples();
+ *          
  *          Audio_Device_USBTask(&My_Audio_Interface);
  *          USB_USBTask();
  *      }
@@ -252,27 +258,31 @@
  *  before the class driver is used. Each Device mode Class driver typically contains a set of configuration parameters
  *  for the endpoint size/number of the associated logical USB interface, plus any class-specific configuration parameters.
  *
- *  The \c State section of the \c USB_ClassInfo_* structures are designed to be controlled by the Class Drivers only for
- *  maintaining the Class Driver instance's state, and should not normally be set by the user application.
- *
- *  The following is an example of a properly initialized instance of the MIDI Class Driver structure:
+ *  The following is an example of a properly initialized instance of the MIDI Host Class Driver structure:
  *
  *  \code
  *  USB_ClassInfo_MIDI_Host_t My_MIDI_Interface =
  *  {
  *      .Config =
  *          {
- *              .DataINPipeNumber       = 1,
- *              .DataINPipeDoubleBank   = false,
- *
- *              .DataOUTPipeNumber      = 2,
- *              .DataOUTPipeDoubleBank  = false,
+ *              .DataINPipe             =
+ *                  {
+ *                      .Address        = (PIPE_DIR_IN  | 1),
+ *                      .Size           = 64,
+ *                      .Banks          = 1,
+ *                  },
+ *              .DataOUTPipe            =
+ *                  {
+ *                      .Address        = (PIPE_DIR_OUT | 2),
+ *                      .Size           = 64,
+ *                      .Banks          = 1,
+ *                  },
  *          },
  *  };
  *  \endcode
  *
  *  To initialize the Class driver instance, the driver's <tt><b>{Class Name}</b>_Host_ConfigurePipes()</tt> function
- *  should be called in response to the host state machine entering the \ref HOST_STATE_Addressed state. This function
+ *  should be called in response to the \c EVENT_USB_Host_DeviceEnumerationComplete() event firing. This function will
  *  will return an error code from the class driver's <tt><b>{Class Name}</b>_EnumerationFailure_ErrorCodes_t</tt> enum
  *  to indicate if the driver successfully initialized the instance and bound it to an interface in the attached device.
  *  Like all the class driver functions, this function takes in the address of the specific instance you wish to initialize -
@@ -280,39 +290,47 @@
  *  based Host mode application may look like the following:
  *
  *  \code
- *      switch (USB_HostState)
+ *  void EVENT_USB_Host_DeviceEnumerationComplete(void)
+ *  {
+ *      LEDs_SetAllLEDs(LEDMASK_USB_ENUMERATING);
+ *      
+ *      uint16_t ConfigDescriptorSize;
+ *      uint8_t  ConfigDescriptorData[512];
+ *      
+ *      if (USB_Host_GetDeviceConfigDescriptor(1, &ConfigDescriptorSize, ConfigDescriptorData,
+ *                                             sizeof(ConfigDescriptorData)) != HOST_GETCONFIG_Successful)
  *      {
- *          case HOST_STATE_Addressed:
- *              LEDs_SetAllLEDs(LEDMASK_USB_ENUMERATING);
- *
- *              uint16_t ConfigDescriptorSize;
- *              uint8_t  ConfigDescriptorData[512];
- *
- *              if (USB_Host_GetDeviceConfigDescriptor(1, &ConfigDescriptorSize, ConfigDescriptorData,
- *                                                     sizeof(ConfigDescriptorData)) != HOST_GETCONFIG_Successful)
- *              {
- *                  LEDs_SetAllLEDs(LEDMASK_USB_ERROR);
- *                  USB_HostState = HOST_STATE_WaitForDeviceRemoval;
- *                  break;
- *              }
- *
- *              if (MIDI_Host_ConfigurePipes(&My_MIDI_Interface,
- *                                           ConfigDescriptorSize, ConfigDescriptorData) != MIDI_ENUMERROR_NoError)
- *              {
- *                  LEDs_SetAllLEDs(LEDMASK_USB_ERROR);
- *                  USB_HostState = HOST_STATE_WaitForDeviceRemoval;
- *                  break;
- *              }
- *
- *              // Other state handler code here
+ *          LEDs_SetAllLEDs(LEDMASK_USB_ERROR);
+ *          return;
+ *      }
+ *      
+ *      if (MIDI_Host_ConfigurePipes(&Keyboard_MIDI_Interface,
+ *                                   ConfigDescriptorSize, ConfigDescriptorData) != MIDI_ENUMERROR_NoError)
+ *      {
+ *          LEDs_SetAllLEDs(LEDMASK_USB_ERROR);
+ *          return;
+ *      }
+ *      
+ *      if (USB_Host_SetDeviceConfiguration(1) != HOST_SENDCONTROL_Successful)
+ *      {
+ *          LEDs_SetAllLEDs(LEDMASK_USB_ERROR);
+ *          return;
+ *      }
+ *      
+ *      LEDs_SetAllLEDs(LEDMASK_USB_READY);
+ *  }
  *  \endcode
  *
- *  Note that the function also required the device's configuration descriptor so that it can determine which interface
+ *  Note that the function also requires the device's configuration descriptor so that it can determine which interface
  *  in the device to bind to - this can be retrieved as shown in the above fragment using the
  *  \ref USB_Host_GetDeviceConfigDescriptor() function. If the device does not implement the interface the class driver
  *  is looking for, if all the matching interfaces are already bound to class driver instances or if an error occurs while
  *  binding to a device interface (for example, a device endpoint bank larger that the maximum supported bank size is used)
  *  the configuration will fail.
+ *
+ *  To complete the device enumeration after binding the host mode Class Drivers to the attached device, a call to
+ *  \c USB_Host_SetDeviceConfiguration() must be made. If the device configuration is not set within the 
+ *  \c EVENT_USB_Host_DeviceEnumerationComplete() event, the host still will assume the device enumeration has failed.
  *
  *  Once initialized, it is important to maintain the class driver's state by repeatedly calling the Class Driver's
  *  <tt><b>{Class Name}</b>_Host_USBTask()</tt> function in the main program loop. The exact implementation of this
@@ -324,16 +342,14 @@
  *  int main(void)
  *  {
  *      SetupHardware();
- *
+ *      
  *      LEDs_SetAllLEDs(LEDMASK_USB_NOTREADY);
- *
+ *      
  *      for (;;)
  *      {
- *          switch (USB_HostState)
- *          {
- *             // Host state machine handling here
- *          }
- *
+ *          if (USB_HostState != HOST_STATE_Configured)
+ *              Create_And_Process_Samples();
+ *          
  *          MIDI_Host_USBTask(&My_Audio_Interface);
  *          USB_USBTask();
  *      }
@@ -366,7 +382,7 @@
 		#include "Core/USBTask.h"
 		#include "Core/Events.h"
 		#include "Core/StdDescriptors.h"
-		#include "Core/ConfigDescriptor.h"
+		#include "Core/ConfigDescriptors.h"
 		#include "Core/USBController.h"
 		#include "Core/USBInterrupt.h"
 
@@ -387,15 +403,16 @@
 		#if defined(USB_CAN_BE_BOTH) || defined(__DOXYGEN__)
 			#include "Core/OTG.h"
 		#endif
-		
-		#include "Class/Audio.h"
-		#include "Class/CDC.h"
-		#include "Class/HID.h"
-		#include "Class/MassStorage.h"
-		#include "Class/MIDI.h"
-		#include "Class/Printer.h"
-		#include "Class/RNDIS.h"
-		#include "Class/StillImage.h"
+
+		#include "Class/AndroidAccessoryClass.h"
+		#include "Class/AudioClass.h"
+		#include "Class/CDCClass.h"
+		#include "Class/HIDClass.h"
+		#include "Class/MassStorageClass.h"
+		#include "Class/MIDIClass.h"
+		#include "Class/PrinterClass.h"
+		#include "Class/RNDISClass.h"
+		#include "Class/StillImageClass.h"
 
 #endif
 

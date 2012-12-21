@@ -1,18 +1,18 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
-              
+     Copyright (C) Dean Camera, 2012.
+
   dean [at] fourwalledcubicle [dot] com
-      www.fourwalledcubicle.com
+           www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
-  Permission to use, copy, modify, and distribute this software
-  and its documentation for any purpose and without fee is hereby
-  granted, provided that the above copyright notice appear in all
-  copies and that both that the copyright notice and this
+  Permission to use, copy, modify, distribute, and sell this
+  software and its documentation for any purpose is hereby granted
+  without fee, provided that the above copyright notice appear in
+  all copies and that both that the copyright notice and this
   permission notice and warranty disclaimer appear in supporting
   documentation, and that the name of the author not be used in
   advertising or publicity pertaining to distribution of the
@@ -41,6 +41,14 @@
  *  \brief Board specific LED driver header for the Atmel EVK1104.
  *
  *  Board specific LED driver header for the Atmel EVK1104.
+ *
+ *  <table>
+ *    <tr><th>Name</th><th>Color</th><th>Info</th><th>Active Level</th><th>Port Pin</th></tr>
+ *    <tr><td>LEDS_LED1</td><td>Green</td><td>LED0 LED</td><td>Low</td><td>GPIO67</td></tr>
+ *    <tr><td>LEDS_LED2</td><td>Green</td><td>LED1 LED</td><td>Low</td><td>GPIO101</td></tr>
+ *    <tr><td>LEDS_LED3</td><td>Green</td><td>LED2 LED</td><td>Low</td><td>GPIO102</td></tr>
+ *    <tr><td>LEDS_LED4</td><td>Green</td><td>LED3 LED</td><td>Low</td><td>GPIO105</td></tr>
+ *  </table>
  *
  *  @{
  */
@@ -100,7 +108,18 @@
 				AVR32_GPIO.port[3].oders = LEDS_LEDMASK3;
 				AVR32_GPIO.port[3].ovrs  = LEDS_LEDMASK3;
 			}
-			
+
+			static inline void LEDs_Disable(void)
+			{
+				AVR32_GPIO.port[2].gperc = LEDS_LEDMASK2;
+				AVR32_GPIO.port[2].oderc = LEDS_LEDMASK2;
+				AVR32_GPIO.port[2].ovrc  = LEDS_LEDMASK2;
+
+				AVR32_GPIO.port[3].gperc = LEDS_LEDMASK3;
+				AVR32_GPIO.port[3].oderc = LEDS_LEDMASK3;
+				AVR32_GPIO.port[3].ovrc  = LEDS_LEDMASK3;
+			}
+
 			static inline void LEDs_TurnOnLEDs(const uint32_t LEDMask)
 			{
 				AVR32_GPIO.port[2].ovrc  = (LEDMask & LEDS_LEDMASK2);
@@ -121,7 +140,7 @@
 				AVR32_GPIO.port[3].ovrs  = LEDS_LEDMASK3;
 				AVR32_GPIO.port[3].ovrc  = (LEDMask & LEDS_LEDMASK3);
 			}
-			
+
 			static inline void LEDs_ChangeLEDs(const uint32_t LEDMask, const uint32_t ActiveMask)
 			{
 				AVR32_GPIO.port[2].ovrs  = (LEDMask    & LEDS_LEDMASK2);
@@ -136,7 +155,7 @@
 				AVR32_GPIO.port[2].ovrt  = (LEDMask & LEDS_LEDMASK2);
 				AVR32_GPIO.port[3].ovrt  = (LEDMask & LEDS_LEDMASK3);
 			}
-			
+
 			static inline uint32_t LEDs_GetLEDs(void) ATTR_WARN_UNUSED_RESULT;
 			static inline uint32_t LEDs_GetLEDs(void)
 			{
@@ -148,7 +167,8 @@
 		#if defined(__cplusplus)
 			}
 		#endif
-		
+
 #endif
 
 /** @} */
+

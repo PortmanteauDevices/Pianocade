@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -183,16 +183,16 @@
 			 *  This event is time-critical; exceeding OS-specific delays within this event handler (typically of around
 			 *  two seconds) will prevent the device from enumerating correctly.
 			 *
+			 *  \attention This event may fire multiple times during device enumeration on the microcontrollers with limited USB controllers
+			 *             if \c NO_LIMITED_CONTROLLER_CONNECT is not defined.
+			 *
 			 *  \note For the microcontrollers with limited USB controller functionality, VBUS sensing is not available.
 			 *        this means that the current connection state is derived from the bus suspension and wake up events by default,
 			 *        which is not always accurate (host may suspend the bus while still connected). If the actual connection state
-			 *        needs to be determined, VBUS should be routed to an external pin, and the auto-detect behaviour turned off by
+			 *        needs to be determined, VBUS should be routed to an external pin, and the auto-detect behavior turned off by
 			 *        passing the \c NO_LIMITED_CONTROLLER_CONNECT token to the compiler via the -D switch at compile time. The connection
 			 *        and disconnection events may be manually fired, and the \ref USB_DeviceState global changed manually.
 			 *        \n\n
-			 *
-			 *  \note This event may fire multiple times during device enumeration on the microcontrollers with limited USB controllers
-			 *        if \c NO_LIMITED_CONTROLLER_CONNECT is not defined.
 			 *
 			 *  \see \ref Group_USBManagement for more information on the USB management task and reducing CPU usage.
 			 */
@@ -201,23 +201,23 @@
 			/** Event for USB device disconnection. This event fires when the microcontroller is in USB Device mode and the device is
 			 *  disconnected from a host, measured by a falling level on the microcontroller's VBUS sense pin.
 			 *
+			 *  \attention This event may fire multiple times during device enumeration on the microcontrollers with limited USB controllers
+			 *             if \c NO_LIMITED_CONTROLLER_CONNECT is not defined.
+			 *
 			 *  \note For the microcontrollers with limited USB controllers, VBUS sense is not available to the USB controller.
 			 *        this means that the current connection state is derived from the bus suspension and wake up events by default,
 			 *        which is not always accurate (host may suspend the bus while still connected). If the actual connection state
-			 *        needs to be determined, VBUS should be routed to an external pin, and the auto-detect behaviour turned off by
+			 *        needs to be determined, VBUS should be routed to an external pin, and the auto-detect behavior turned off by
 			 *        passing the \c NO_LIMITED_CONTROLLER_CONNECT token to the compiler via the -D switch at compile time. The connection
 			 *        and disconnection events may be manually fired, and the \ref USB_DeviceState global changed manually.
 			 *        \n\n
-			 *
-			 *  \note This event may fire multiple times during device enumeration on the microcontrollers with limited USB controllers
-			 *        if \c NO_LIMITED_CONTROLLER_CONNECT is not defined.
 			 *
 			 *  \see \ref Group_USBManagement for more information on the USB management task and reducing CPU usage.
 			 */
 			void EVENT_USB_Device_Disconnect(void);
 
 			/** Event for control requests. This event fires when a the USB host issues a control request
-			 *  to the mandatory device control endpoint (of address 0). This may either be a standard 
+			 *  to the mandatory device control endpoint (of address 0). This may either be a standard
 			 *  request that the library may have a handler code for internally, or a class specific request
 			 *  issued to the device which must be handled appropriately. If a request is not processed in the
 			 *  user application via this event, it will be passed to the library for processing internally

@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -29,7 +29,7 @@
 */
 
 /** \file
- *  \brief Board specific LED driver header for the Atmel XPLAIN.
+ *  \brief Board specific LED driver header for the original Atmel XPLAIN.
  *  \copydetails Group_LEDs_XPLAIN
  *
  *  \note This file should not be included directly. It is automatically included as needed by the LEDs driver
@@ -37,10 +37,22 @@
  */
 
 /** \ingroup Group_LEDs
+ *  \defgroup Group_LEDs_XPLAIN_REV1 XPLAIN_REV1
+ *  \brief Board specific LED driver header for the original Atmel XPLAIN, revision 1.
+ *
+ *  See \ref Group_LEDs_XPLAIN for more details.
+ */
+
+/** \ingroup Group_LEDs
  *  \defgroup Group_LEDs_XPLAIN XPLAIN
- *  \brief Board specific LED driver header for the Atmel XPLAIN.
+ *  \brief Board specific LED driver header for the original Atmel XPLAIN.
  *
  *  Board specific LED driver header for the Atmel XPLAIN.
+ *
+ *  <table>
+ *    <tr><th>Name</th><th>Color</th><th>Info</th><th>Active Level</th><th>Port Pin</th></tr>
+ *    <tr><td>LEDS_LED1</td><td>Green</td><td>General Indicator</td><td>Low</td><td>PORTB.6</td></tr>
+ *  </table>
  *
  *  @{
  */
@@ -80,6 +92,12 @@
 				PORTB |= LEDS_ALL_LEDS;
 			}
 
+			static inline void LEDs_Disable(void)
+			{
+				DDRB  &= ~LEDS_ALL_LEDS;
+				PORTB &= ~LEDS_ALL_LEDS;
+			}
+
 			static inline void LEDs_TurnOnLEDs(const uint8_t LEDMask)
 			{
 				PORTB &= ~LEDMask;
@@ -103,7 +121,7 @@
 
 			static inline void LEDs_ToggleLEDs(const uint8_t LEDMask)
 			{
-				PORTB ^= LEDMask;
+				PINB  = LEDMask;
 			}
 
 			static inline uint8_t LEDs_GetLEDs(void) ATTR_WARN_UNUSED_RESULT;

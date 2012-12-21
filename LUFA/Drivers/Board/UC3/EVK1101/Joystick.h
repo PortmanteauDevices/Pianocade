@@ -1,18 +1,18 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
-              
+     Copyright (C) Dean Camera, 2012.
+
   dean [at] fourwalledcubicle [dot] com
-      www.fourwalledcubicle.com
+           www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
-  Permission to use, copy, modify, and distribute this software
-  and its documentation for any purpose and without fee is hereby
-  granted, provided that the above copyright notice appear in all
-  copies and that both that the copyright notice and this
+  Permission to use, copy, modify, distribute, and sell this
+  software and its documentation for any purpose is hereby granted
+  without fee, provided that the above copyright notice appear in
+  all copies and that both that the copyright notice and this
   permission notice and warranty disclaimer appear in supporting
   documentation, and that the name of the author not be used in
   advertising or publicity pertaining to distribution of the
@@ -42,9 +42,14 @@
  *
  *  Board specific joystick driver header for the Atmel EVK1101.
  *
+ *  <table>
+ *    <tr><th>Left Port Pin</th><th>Up Port Pin</th><th>Right Port Pin</th><th>Down Port Pin</th><th>Press Port Pin</th></tr>
+ *    <tr><td>GPIO38</td><td>GPIO39</td><td>GPIO41</td><td>GPIO40</td><td>GPIO13</td></tr>
+ *  </table>
+ *
  *  @{
  */
- 
+
 #ifndef __JOYSTICK_EVK1101_H__
 #define __JOYSTICK_EVK1101_H__
 
@@ -69,7 +74,7 @@
 			#define JOY_PRESS_PORT           0
 			#define JOY_PRESS_MASK           (1UL << 13)
 	#endif
-	
+
 	/* Public Interface - May be used in end-application: */
 		/* Macros: */
 			/** Mask for the joystick being pushed in the left direction. */
@@ -86,7 +91,7 @@
 
 			/** Mask for the joystick being pushed inward. */
 			#define JOY_PRESS                 (1UL << 13)
-			
+
 		/* Inline Functions: */
 		#if !defined(__DOXYGEN__)
 			static inline void Joystick_Init(void)
@@ -97,7 +102,16 @@
 				AVR32_GPIO.port[JOY_MOVE_PORT].puers  = JOY_MOVE_MASK;
 				AVR32_GPIO.port[JOY_PRESS_PORT].puers = JOY_PRESS_MASK;
 			};
-			
+
+			static inline void Joystick_Disable(void)
+			{
+				AVR32_GPIO.port[JOY_MOVE_PORT].gperc  = JOY_MOVE_MASK;
+				AVR32_GPIO.port[JOY_PRESS_PORT].gperc = JOY_PRESS_MASK;
+
+				AVR32_GPIO.port[JOY_MOVE_PORT].puerc  = JOY_MOVE_MASK;
+				AVR32_GPIO.port[JOY_PRESS_PORT].puerc = JOY_PRESS_MASK;
+			};
+
 			static inline uint32_t Joystick_GetStatus(void) ATTR_WARN_UNUSED_RESULT;
 			static inline uint32_t Joystick_GetStatus(void)
 			{
@@ -114,3 +128,4 @@
 #endif
 
 /** @} */
+

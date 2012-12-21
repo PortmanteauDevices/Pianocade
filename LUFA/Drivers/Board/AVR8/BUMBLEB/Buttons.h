@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -44,6 +44,11 @@
  *  third-party board does not include any on-board peripherals, but does have an officially recommended external peripheral
  *  layout for buttons, LEDs and a Joystick.
  *
+ *  <table>
+ *    <tr><th>Name</th><th>Info</th><th>Active Level</th><th>Port Pin</th></tr>
+ *    <tr><td>BUTTONS_BUTTON1</td><td>HWB Button</td><td>Low</td><td>PORTD.7</td></tr>
+ *  </table>
+ *
  *  @{
  */
 
@@ -74,6 +79,12 @@
 			{
 				DDRD  &= ~BUTTONS_BUTTON1;
 				PORTD |=  BUTTONS_BUTTON1;
+			}
+
+			static inline void Buttons_Disable(void)
+			{
+				DDRD  &= ~BUTTONS_BUTTON1;
+				PORTD &= ~BUTTONS_BUTTON1;
 			}
 
 			static inline uint8_t Buttons_GetStatus(void) ATTR_WARN_UNUSED_RESULT;

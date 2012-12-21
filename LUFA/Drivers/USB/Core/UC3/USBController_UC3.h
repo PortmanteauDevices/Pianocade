@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -84,6 +84,16 @@
 			#error F_USB is not defined. You must define F_USB to the frequency of the clock input to the USB module.
 		#endif
 
+		#if (defined(USB_SERIES_UC3A3_AVR) || defined(USB_SERIES_UC3A4_AVR))
+			#if ((F_USB < 12000000) || (F_USB % 12000000))
+				#error Invalid F_USB specified. F_USB must be a multiple of 12MHz for UC3A3 and UC3A4 devices.
+			#endif		
+		#else
+			#if ((F_USB < 48000000) || (F_USB % 48000000))
+				#error Invalid F_USB specified. F_USB must be a multiple of 48MHz for UC3A and UC3B devices.
+			#endif		
+		#endif
+		
 	/* Public Interface - May be used in end-application: */
 		/* Macros: */
 			/** \name USB Controller Option Masks */
@@ -172,7 +182,7 @@
 			 *                      from the \ref USB_Modes_t enum.
 			 *
 			 *  \param[in] Options  Mask indicating the options which should be used when initializing the USB
-			 *                      interface to control the USB interface's behaviour. This should be comprised of
+			 *                      interface to control the USB interface's behavior. This should be comprised of
 			 *                      a \c USB_OPT_REG_* mask to control the regulator, a \c USB_OPT_*_PLL mask to control the
 			 *                      PLL, and a \c USB_DEVICE_OPT_* mask (when the device mode is enabled) to set the device
 			 *                      mode speed.
@@ -184,7 +194,7 @@
 			 *        function prototype.
 			 *        \n\n
 			 *
-			 *  \note To reduce the FLASH requirements of the library if only fixed settings are are required,
+			 *  \note To reduce the FLASH requirements of the library if only fixed settings are required,
 			 *        the options may be set statically in the same manner as the mode (see the Mode parameter of
 			 *        this function). To statically set the USB options, pass in the \c USE_STATIC_OPTIONS token,
 			 *        defined to the appropriate options masks. When the options are statically set, this
@@ -224,9 +234,8 @@
 				/** Indicates the mode that the USB interface is currently initialized to, a value from the
 				 *  \ref USB_Modes_t enum.
 				 *
-				 *  \note This variable should be treated as read-only in the user application, and never manually
-				 *        changed in value.
-				 *        \n\n
+				 *  \attention This variable should be treated as read-only in the user application, and never manually
+				 *             changed in value.
 				 *
 				 *  \note When the controller is initialized into UID auto-detection mode, this variable will hold the
 				 *        currently selected USB mode (i.e. \ref USB_MODE_Device or \ref USB_MODE_Host). If the controller
@@ -246,8 +255,8 @@
 				/** Indicates the current USB options that the USB interface was initialized with when \ref USB_Init()
 				 *  was called. This value will be one of the \c USB_MODE_* masks defined elsewhere in this module.
 				 *
-				 *  \note This variable should be treated as read-only in the user application, and never manually
-				 *        changed in value.
+				 *  \attention This variable should be treated as read-only in the user application, and never manually
+				 *             changed in value.
 				 */
 				extern volatile uint8_t USB_Options;
 			#elif defined(USE_STATIC_OPTIONS)
@@ -270,13 +279,13 @@
 
 	/* Private Interface - For use in library only: */
 	#if !defined(__DOXYGEN__)
-		/* Macros: */			
+		/* Macros: */
 			#if defined(USB_SERIES_UC3A3_AVR32) || defined(USB_SERIES_UC3A4_AVR32)
 				#define USB_CLOCK_REQUIRED_FREQ  12000000UL
 			#else
 				#define USB_CLOCK_REQUIRED_FREQ  48000000UL
 			#endif
-	
+
 		/* Function Prototypes: */
 			#if defined(__INCLUDE_FROM_USB_CONTROLLER_C)
 				#if defined(USB_CAN_BE_DEVICE)

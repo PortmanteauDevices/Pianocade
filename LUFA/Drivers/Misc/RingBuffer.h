@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -39,7 +39,7 @@
  *  or deletions) must not overlap. If there is possibility of two or more of the same kind of
  *  operating occurring at the same point in time, atomic (mutex) locking should be used.
  */
- 
+
 /** \ingroup Group_MiscDrivers
  *  \defgroup Group_RingBuff Generic Byte Ring Buffer - LUFA/Drivers/Misc/RingBuffer.h
  *  \brief Lightweight ring buffer, for fast insertion/deletion of bytes.
@@ -65,23 +65,23 @@
  *      // Create the buffer structure and its underlying storage array
  *      RingBuffer_t Buffer;
  *      uint8_t      BufferData[128];
- *
+ *      
  *      // Initialize the buffer with the created storage array
  *      RingBuffer_InitBuffer(&Buffer, BufferData, sizeof(BufferData));
- *
+ *      
  *      // Insert some data into the buffer
  *      RingBuffer_Insert(Buffer, 'H');
  *      RingBuffer_Insert(Buffer, 'E');
  *      RingBuffer_Insert(Buffer, 'L');
  *      RingBuffer_Insert(Buffer, 'L');
  *      RingBuffer_Insert(Buffer, 'O');
- *
+ *      
  *      // Cache the number of stored bytes in the buffer
  *      uint16_t BufferCount = RingBuffer_GetCount(&Buffer);
- *
+ *      
  *      // Printer stored data length
  *      printf("Buffer Length: %d, Buffer Data: \r\n", BufferCount);
- *
+ *      
  *      // Print contents of the buffer one character at a time
  *      while (BufferCount--)
  *        putc(RingBuffer_Remove(&Buffer));
@@ -113,7 +113,7 @@
 			uint8_t* Out; /**< Current retrieval location in the circular buffer. */
 			uint8_t* Start; /**< Pointer to the start of the buffer's underlying storage array. */
 			uint8_t* End; /**< Pointer to the end of the buffer's underlying storage array. */
-			uint8_t  Size; /**< Size of the buffer's underlying storage array. */
+			uint16_t Size; /**< Size of the buffer's underlying storage array. */
 			uint16_t Count; /**< Number of bytes currently stored in the buffer. */
 		} RingBuffer_t;
 
@@ -134,7 +134,7 @@
 
 			uint_reg_t CurrentGlobalInt = GetGlobalInterruptMask();
 			GlobalInterruptDisable();
-	
+
 			Buffer->In     = DataPtr;
 			Buffer->Out    = DataPtr;
 			Buffer->Start  = &DataPtr[0];
@@ -166,7 +166,7 @@
 
 			uint_reg_t CurrentGlobalInt = GetGlobalInterruptMask();
 			GlobalInterruptDisable();
-			
+
 			Count = Buffer->Count;
 
 			SetGlobalInterruptMask(CurrentGlobalInt);
@@ -225,9 +225,9 @@
 
 		/** Inserts an element into the ring buffer.
 		 *
-		 *  \note Only one execution thread (main program thread or an ISR) may insert into a single buffer
-		 *        otherwise data corruption may occur. Insertion and removal may occur from different execution
-		 *        threads.
+		 *  \warning Only one execution thread (main program thread or an ISR) may insert into a single buffer
+		 *           otherwise data corruption may occur. Insertion and removal may occur from different execution
+		 *           threads.
 		 *
 		 *  \param[in,out] Buffer  Pointer to a ring buffer structure to insert into.
 		 *  \param[in]     Data    Data element to insert into the buffer.
@@ -244,7 +244,7 @@
 
 			uint_reg_t CurrentGlobalInt = GetGlobalInterruptMask();
 			GlobalInterruptDisable();
-			
+
 			Buffer->Count++;
 
 			SetGlobalInterruptMask(CurrentGlobalInt);
@@ -252,9 +252,9 @@
 
 		/** Removes an element from the ring buffer.
 		 *
-		 *  \note Only one execution thread (main program thread or an ISR) may remove from a single buffer
-		 *        otherwise data corruption may occur. Insertion and removal may occur from different execution
-		 *        threads.
+		 *  \warning Only one execution thread (main program thread or an ISR) may remove from a single buffer
+		 *           otherwise data corruption may occur. Insertion and removal may occur from different execution
+		 *           threads.
 		 *
 		 *  \param[in,out] Buffer  Pointer to a ring buffer structure to retrieve from.
 		 *
@@ -264,7 +264,7 @@
 		static inline uint8_t RingBuffer_Remove(RingBuffer_t* Buffer)
 		{
 			GCC_FORCE_POINTER_ACCESS(Buffer);
-		
+
 			uint8_t Data = *Buffer->Out;
 
 			if (++Buffer->Out == Buffer->End)
@@ -272,7 +272,7 @@
 
 			uint_reg_t CurrentGlobalInt = GetGlobalInterruptMask();
 			GlobalInterruptDisable();
-			
+
 			Buffer->Count--;
 
 			SetGlobalInterruptMask(CurrentGlobalInt);

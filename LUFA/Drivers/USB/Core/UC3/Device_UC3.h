@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -54,7 +54,7 @@
 		#include "../StdDescriptors.h"
 		#include "../USBInterrupt.h"
 		#include "../Endpoint.h"
-		
+
 	/* Enable C linkage for C++ Compilers: */
 		#if defined(__cplusplus)
 			extern "C" {
@@ -73,7 +73,7 @@
 			 *  USB interface should be initialized in low speed (1.5Mb/s) mode.
 			 *
 			 *  \note Restrictions apply on the number, size and type of endpoints which can be used
-			 *        when running in low speed mode - refer to the USB 2.0 specification.
+			 *        when running in low speed mode - please refer to the USB 2.0 specification.
 			 */
 			#define USB_DEVICE_OPT_LOWSPEED                (1 << 0)
 
@@ -81,15 +81,15 @@
 			 *  USB interface should be initialized in full speed (12Mb/s) mode.
 			 */
 			#define USB_DEVICE_OPT_FULLSPEED               (0 << 0)
-			
+
 			#if defined(USB_SERIES_UC3A3_AVR32) || defined(USB_SERIES_UC3A4_AVR32) || defined(__DOXYGEN__)
 				/** Mask for the Options parameter of the \ref USB_Init() function. This indicates that the
 				 *  USB interface should be initialized in high speed (480Mb/s) mode.
 				 */
-				#define USB_DEVICE_OPT_HIGHSPEED           (1 << 1)			
+				#define USB_DEVICE_OPT_HIGHSPEED           (1 << 1)
 			#endif
 			//@}
-			
+
 			#if (!defined(NO_INTERNAL_SERIAL) && \
 			     (defined(USB_SERIES_UC3A3_AVR32) || defined(USB_SERIES_UC3A4_AVR32) || \
 				  defined(__DOXYGEN__)))
@@ -103,7 +103,7 @@
 				 *  number for the device.
 				 */
 				#define USE_INTERNAL_SERIAL             0xDC
-				
+
 				/** Length of the device's unique internal serial number, in bits, if present on the selected microcontroller
 				 *  model.
 				 */
@@ -119,7 +119,7 @@
 				#define INTERNAL_SERIAL_LENGTH_BITS     0
 				#define INTERNAL_SERIAL_START_ADDRESS   0
 			#endif
-						
+
 		/* Function Prototypes: */
 			/** Sends a Remote Wakeup request to the host. This signals to the host that the device should
 			 *  be taken out of suspended mode, and communications should resume.
@@ -127,12 +127,11 @@
 			 *  Typically, this is implemented so that HID devices (mice, keyboards, etc.) can wake up the
 			 *  host computer when the host has suspended all USB devices to enter a low power state.
 			 *
-			 *  \note This macro should only be used if the device has indicated to the host that it
+			 *  \note This function should only be used if the device has indicated to the host that it
 			 *        supports the Remote Wakeup feature in the device descriptors, and should only be
 			 *        issued if the host is currently allowing remote wakeup events from the device (i.e.,
 			 *        the \ref USB_Device_RemoteWakeupEnabled flag is set). When the \c NO_DEVICE_REMOTE_WAKEUP
-			 *        compile time option is used, this macro is unavailable.
-			 *        \n\n
+			 *        compile time option is used, this function is unavailable.
 			 *
 			 *  \note The USB clock must be running for this function to operate. If the stack is initialized with
 			 *        the \ref USB_OPT_MANUAL_PLL option enabled, the user must ensure that the PLL is running
@@ -225,7 +224,7 @@
 			{
 				uint_reg_t CurrentGlobalInt = GetGlobalInterruptMask();
 				GlobalInterruptDisable();
-				
+
 				uint8_t* SigReadAddress = (uint8_t*)INTERNAL_SERIAL_START_ADDRESS;
 
 				for (uint8_t SerialCharNum = 0; SerialCharNum < (INTERNAL_SERIAL_LENGTH_BITS / 4); SerialCharNum++)
@@ -243,7 +242,7 @@
 					UnicodeString[SerialCharNum] = cpu_to_le16((SerialByte >= 10) ?
 															   (('A' - 10) + SerialByte) : ('0' + SerialByte));
 				}
-				
+
 				SetGlobalInterruptMask(CurrentGlobalInt);
 			}
 			#endif

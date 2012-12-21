@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -124,7 +124,7 @@ static void USB_Device_SetAddress(void)
 	uint8_t    DeviceAddress    = (USB_ControlRequest.wValue & 0x7F);
 	uint_reg_t CurrentGlobalInt = GetGlobalInterruptMask();
 	GlobalInterruptDisable();
-				
+
 	Endpoint_ClearSETUP();
 
 	Endpoint_ClearStatusStage();
@@ -133,7 +133,7 @@ static void USB_Device_SetAddress(void)
 
 	USB_Device_SetDeviceAddress(DeviceAddress);
 	USB_DeviceState = (DeviceAddress) ? DEVICE_STATE_Addressed : DEVICE_STATE_Default;
-	
+
 	SetGlobalInterruptMask(CurrentGlobalInt);
 }
 
@@ -156,7 +156,7 @@ static void USB_Device_SetConfiguration(void)
 			uint8_t MemoryAddressSpace;
 		#endif
 	#endif
-	
+
 	if (CALLBACK_USB_GetDescriptor((DTYPE_Device << 8), 0, (void*)&DevDescriptorPtr
 	#if defined(ARCH_HAS_MULTI_ADDRESS_SPACE) && \
 	    !(defined(USE_FLASH_DESCRIPTORS) || defined(USE_EEPROM_DESCRIPTORS) || defined(USE_RAM_DESCRIPTORS))
@@ -185,7 +185,7 @@ static void USB_Device_SetConfiguration(void)
 	}
 	#else
 	if ((uint8_t)USB_ControlRequest.wValue > DevDescriptorPtr->NumberOfConfigurations)
-	  return;	
+	  return;
 	#endif
 	#endif
 
@@ -224,7 +224,7 @@ static void USB_Device_GetInternalSerialDescriptor(void)
 
 	SignatureDescriptor.Header.Type = DTYPE_String;
 	SignatureDescriptor.Header.Size = USB_STRING_LEN(INTERNAL_SERIAL_LENGTH_BITS / 4);
-	
+
 	USB_Device_GetSerialString(SignatureDescriptor.UnicodeString);
 
 	Endpoint_ClearSETUP();
@@ -289,7 +289,6 @@ static void USB_Device_GetStatus(void)
 
 	switch (USB_ControlRequest.bmRequestType)
 	{
-		#if !defined(NO_DEVICE_SELF_POWER) || !defined(NO_DEVICE_REMOTE_WAKEUP)
 		case (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_DEVICE):
 			#if !defined(NO_DEVICE_SELF_POWER)
 			if (USB_Device_CurrentlySelfPowered)
@@ -301,17 +300,16 @@ static void USB_Device_GetStatus(void)
 			  CurrentStatus |= FEATURE_REMOTE_WAKEUP_ENABLED;
 			#endif
 			break;
-		#endif
-		#if !defined(CONTROL_ONLY_DEVICE)
 		case (REQDIR_DEVICETOHOST | REQTYPE_STANDARD | REQREC_ENDPOINT):
+			#if !defined(CONTROL_ONLY_DEVICE)
 			Endpoint_SelectEndpoint((uint8_t)USB_ControlRequest.wIndex & ENDPOINT_EPNUM_MASK);
 
 			CurrentStatus = Endpoint_IsStalled();
 
 			Endpoint_SelectEndpoint(ENDPOINT_CONTROLEP);
+			#endif
 
 			break;
-		#endif
 		default:
 			return;
 	}

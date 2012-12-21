@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -54,57 +54,57 @@
  *  \code
  *      // Initialize the TWI driver before first use at 200KHz
  *      TWI_Init(TWI_BIT_PRESCALE_1, TWI_BITLENGTH_FROM_FREQ(1, 200000));
- *
+ *      
  *      // Start a write session to device at device address 0xA0, internal address 0xDC with a 10ms timeout
  *      if (TWI_StartTransmission(0xA0 | TWI_ADDRESS_WRITE, 10) == TWI_ERROR_NoError)
  *      {
  *          TWI_SendByte(0xDC);
- *
+ *          
  *          TWI_SendByte(0x01);
  *          TWI_SendByte(0x02);
  *          TWI_SendByte(0x03);
- *
+ *          
  *          // Must stop transmission afterwards to release the bus
  *          TWI_StopTransmission();
  *      }
- *
+ *      
  *      // Start a read session to device at address 0xA0, internal address 0xDC with a 10ms timeout
  *      if (TWI_StartTransmission(0xA0 | TWI_ADDRESS_WRITE, 10) == TWI_ERROR_NoError)
  *      {
  *          TWI_SendByte(0xDC);
  *          TWI_StopTransmission();
- *
+ *          
  *          if (TWI_StartTransmission(0xA0 | TWI_ADDRESS_READ, 10) == TWI_ERROR_NoError)
  *          {
  *              uint8_t Byte1, Byte2, Byte3;
- *
+ *              
  *              // Read three bytes, acknowledge after the third byte is received
  *              TWI_ReceiveByte(&Byte1, false);
  *              TWI_ReceiveByte(&Byte2, false);
  *              TWI_ReceiveByte(&Byte3, true);
- *
+ *              
  *              // Must stop transmission afterwards to release the bus
  *              TWI_StopTransmission();
  *          }
  *      }
  *  \endcode
- * 
+ *
  *  <b>High Level API Example:</b>
  *  \code
  *      // Initialize the TWI driver before first use at 200KHz
  *      TWI_Init(TWI_BIT_PRESCALE_1, TWI_BITLENGTH_FROM_FREQ(1, 200000));
- *
+ *      
  *      // Start a write session to device at device address 0xA0, internal address 0xDC with a 10ms timeout
  *      uint8_t InternalWriteAddress = 0xDC;
  *      uint8_t WritePacket[3] = {0x01, 0x02, 0x03};
- *
+ *      
  *      TWI_WritePacket(0xA0, 10, &InternalWriteAddress, sizeof(InternalWriteAddress),
  *                      &WritePacket, sizeof(WritePacket);
- *
+ *      
  *      // Start a read session to device at address 0xA0, internal address 0xDC with a 10ms timeout
  *      uint8_t InternalReadAddress = 0xDC;
  *      uint8_t ReadPacket[3];
- *
+ *      
  *      TWI_ReadPacket(0xA0, 10, &InternalReadAddress, sizeof(InternalReadAddress),
  *                     &ReadPacket, sizeof(ReadPacket);
  *  \endcode
@@ -154,10 +154,10 @@
 			 *  or \ref TWI_ADDRESS_WRITE to obtain the device's read and write address respectively.
 			 */
 			#define TWI_DEVICE_ADDRESS_MASK  0xFE
-			
+
 			/** Bit length prescaler for \ref TWI_Init(). This mask multiplies the TWI bit length prescaler by 1. */
 			#define TWI_BIT_PRESCALE_1       ((0 << TWPS1) | (0 << TWPS0))
-			
+
 			/** Bit length prescaler for \ref TWI_Init(). This mask multiplies the TWI bit length prescaler by 4. */
 			#define TWI_BIT_PRESCALE_4       ((0 << TWPS1) | (1 << TWPS0))
 
@@ -166,7 +166,7 @@
 
 			/** Bit length prescaler for \ref TWI_Init(). This mask multiplies the TWI bit length prescaler by 64. */
 			#define TWI_BIT_PRESCALE_64      ((1 << TWPS1) | (1 << TWPS0))
-			
+
 			/** Calculates the length of each bit on the TWI bus for a given target frequency. This may be used with
 			 *  the \ref TWI_Init() function to convert a bus frequency to a number of clocks for the \c BitLength
 			 *  parameter.
@@ -189,15 +189,15 @@
 				TWI_ERROR_SlaveNotReady        = 4, /**< Slave NAKed the TWI bus START condition. */
 				TWI_ERROR_SlaveNAK             = 5, /**< Slave NAKed whilst attempting to send data to the device. */
 			};
-	
+
 		/* Inline Functions: */
 			/** Initializes the TWI hardware into master mode, ready for data transmission and reception. This must be
 			 *  before any other TWI operations.
 			 *
 			 *  The generated SCL frequency will be according to the formula <pre>F_CPU / (16 + 2 * BitLength + 4 ^ Prescale)</pre>.
 			 *
-			 *  \note The value of the \c BitLength parameter should not be set below 10 or invalid bus conditions may
-			 *        occur, as indicated in the AVR8 microcontroller datasheet.
+			 *  \attention The value of the \c BitLength parameter should not be set below 10 or invalid bus conditions may
+			 *             occur, as indicated in the AVR8 microcontroller datasheet.
 			 *
 			 *  \param[in] Prescale   Prescaler to use when determining the bus frequency, a \c TWI_BIT_PRESCALE_* value.
 			 *  \param[in] BitLength  Length of the bits sent on the bus.
@@ -254,9 +254,7 @@
 			 */
 			bool TWI_ReceiveByte(uint8_t* const Byte,
 			                     const bool LastByte) ATTR_NON_NULL_PTR_ARG(1);
-			bool TWI_ReceiveByte(uint8_t* const Byte,
-			                     const bool LastByte);
-					 
+
 			/** High level function to perform a complete packet transfer over the TWI bus to the specified
 			 *  device.
 			 *

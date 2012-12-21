@@ -1,13 +1,13 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2011.
+     Copyright (C) Dean Camera, 2012.
 
   dean [at] fourwalledcubicle [dot] com
            www.lufa-lib.org
 */
 
 /*
-  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2012  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
@@ -27,6 +27,9 @@
   arising out of or in connection with the use or performance of
   this software.
 */
+
+#include "../../../Common/Common.h"
+#if (ARCH == ARCH_AVR8) && defined(TWCR)
 
 #define  __INCLUDE_FROM_TWI_C
 #include "../TWI.h"
@@ -119,9 +122,9 @@ bool TWI_ReceiveByte(uint8_t* const Byte,
 	TWCR = TWCRMask;
 	while (!(TWCR & (1 << TWINT)));
 	*Byte = TWDR;
-	
+
 	uint8_t Status = (TWSR & TW_STATUS_MASK);
-	
+
 	return ((LastByte) ? (Status == TW_MR_DATA_NACK) : (Status == TW_MR_DATA_ACK));
 }
 
@@ -133,19 +136,19 @@ uint8_t TWI_ReadPacket(const uint8_t SlaveAddress,
                        uint8_t Length)
 {
 	uint8_t ErrorCode;
-	
+
 	if ((ErrorCode = TWI_StartTransmission((SlaveAddress & TWI_DEVICE_ADDRESS_MASK) | TWI_ADDRESS_WRITE,
 	                                       TimeoutMS)) == TWI_ERROR_NoError)
 	{
 		while (InternalAddressLen--)
 		{
 			if (!(TWI_SendByte(*(InternalAddress++))))
-			{				
+			{
 				ErrorCode = TWI_ERROR_SlaveNAK;
 				break;
 			}
 		}
-		
+
 		if ((ErrorCode = TWI_StartTransmission((SlaveAddress & TWI_DEVICE_ADDRESS_MASK) | TWI_ADDRESS_READ,
 											   TimeoutMS)) == TWI_ERROR_NoError)
 		{
@@ -157,11 +160,11 @@ uint8_t TWI_ReadPacket(const uint8_t SlaveAddress,
 					break;
 				}
 			}
-			
+
 			TWI_StopTransmission();
 		}
 	}
-	
+
 	return ErrorCode;
 }
 
@@ -180,7 +183,7 @@ uint8_t TWI_WritePacket(const uint8_t SlaveAddress,
 		while (InternalAddressLen--)
 		{
 			if (!(TWI_SendByte(*(InternalAddress++))))
-			{				
+			{
 				ErrorCode = TWI_ERROR_SlaveNAK;
 				break;
 			}
@@ -194,9 +197,11 @@ uint8_t TWI_WritePacket(const uint8_t SlaveAddress,
 				break;
 			}
 		}
-		
+
 		TWI_StopTransmission();
 	}
-	
+
 	return ErrorCode;
 }
+
+#endif
