@@ -1,5 +1,7 @@
 #include "pianocade.h"
 
+uint32_t Boot_Key ATTR_NO_INIT;
+
 const uint8_t prescaler[TOTAL_NOTES] PROGMEM = {0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b011, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010};
 //const uint8_t prescaler[TOTAL_NOTES] PROGMEM = {0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b010, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001, 0b001};
 
@@ -803,6 +805,9 @@ static inline void pianocadeSetup(){
 
 static inline void initializeTranspose(){
     readPins();
+    if(coin == 0b11){
+        Jump_To_Bootloader();
+    }
     for(uint8_t i = 0; i < 25; ++i){
         if((notes_pressed >> i) & 1){
             transpose = i % 12;
@@ -1116,4 +1121,30 @@ void list_find_and_remove(uint8_t data){
         }
         current_node = list_next[current_node];
     }
+}
+
+void Bootloader_Jump_Check(void)
+{
+    // If the reset source was the bootloader and the key is correct, clear it and jump to the bootloader
+    if ((MCUSR & (1 << WDRF)) && (Boot_Key == MAGIC_BOOT_KEY))
+    {
+        Boot_Key = 0;
+        ((void (*)(void))BOOTLOADER_START_ADDRESS)();
+    }
+}
+void Jump_To_Bootloader(void)
+{
+    // If USB is used, detach from the bus and reset it
+    USB_Disable();
+    
+    // Disable all interrupts
+    cli();
+    
+    // Wait two seconds for the USB detachment to register on the host
+    Delay_MS(2000);
+    
+    // Set the bootloader key to the magic value and force a reset
+    Boot_Key = MAGIC_BOOT_KEY;
+    wdt_enable(WDTO_250MS);
+    for (;;);
 }

@@ -12,6 +12,18 @@
     #include <stdlib.h>
     #include <string.h>
     #include <avr/eeprom.h>
+    
+    #include <avr/wdt.h>
+    #include <avr/io.h>
+    #include <util/delay.h>
+
+    #include <LUFA/Common/Common.h>
+    #include <LUFA/Drivers/USB/USB.h>
+
+    #define MAGIC_BOOT_KEY            0xDC42ACCA
+    #define FLASH_SIZE_BYTES    65536
+    #define BOOTLOADER_SEC_SIZE_BYTES   4096
+    #define BOOTLOADER_START_ADDRESS  (FLASH_SIZE_BYTES - BOOTLOADER_SEC_SIZE_BYTES)
 
     extern USB_ClassInfo_MIDI_Device_t Keyboard_MIDI_Interface;
 
@@ -62,7 +74,7 @@
     #define CURRENT_PITCH (current_note + shift)
     #define BEND_SPEED 20
     #define BEND_MAX 8
-    #define DEBOUNCE 50
+    #define DEBOUNCE 127
     #define NOTES_DEBOUNCE DEBOUNCE
     #define CONTROL_DEBOUNCE DEBOUNCE
     #define HELD_DEBOUNCE DEBOUNCE
@@ -176,5 +188,8 @@
     static inline void onOctaveChange(void);
     
     static inline void loadPressedNotes(uint16_t noteStore[]);
+    
+    void Bootloader_Jump_Check(void) ATTR_INIT_SECTION(3);
+    void Jump_To_Bootloader(void);
 
 #endif /* end of include guard: PIANOCADE_H */
