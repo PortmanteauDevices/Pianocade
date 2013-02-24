@@ -272,9 +272,9 @@ const USB_Descriptor_String_t PROGMEM LanguageString =
   */
  const USB_Descriptor_String_t PROGMEM ProductString =
  {
-     .Header                 = {.Size = USB_STRING_LEN(24), .Type = DTYPE_String},
+     .Header                 = {.Size = USB_STRING_LEN(17), .Type = DTYPE_String},
 
-     .UnicodeString          = L"Pianocade Prototype 0x01"
+     .UnicodeString          = L"Pianocade 0x02.01"
  };
 
 /** This function is called by the library when in device mode, and must be overridden (see library "USB Descriptors"
