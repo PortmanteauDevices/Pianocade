@@ -36,3 +36,5 @@ Icon?
 Thumbs.db
 JeffsPatches.c
 patch backup.c
+burn.sh
+softboot.c
