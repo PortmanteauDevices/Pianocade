@@ -20,11 +20,13 @@ These buttons select sound bank. They can be combined into as chords, for a tota
 #### Player 1 + Left Coin Button
 Cycle through the different arpeggiator orders
 
+*NOTE: on some units this will be Player 4 + Left Coin Button. This will be fixed in the first firmware update, coming soon.*
+
 ### Coin buttons
 #### Left Coin Button
-acts as "shift" key to access secondary functions
+Acts as "shift" key to access secondary functions
 #### Right Coin Button
-hold the currently sounding notes. With left coin button, clear currently held notes
+Hold the currently sounding notes. With left coin button, clear currently held notes
 
 ## Arpeggiator
 The Pianocade is monophonic: only one note sounds at a time. When multiple notes are sounded simultaneously, the Pianocade arpeggiates them (switches between them quickly). Both the rate and the order of arpeggiation can be set on a per-patch basis.
@@ -35,3 +37,23 @@ These can be changed for the current patch by pressing the LEFT COIN button and 
 The arpeggiation speed can be adjusted by holding the LEFT COIN button and moving the joystick left and right (to halve or double the speed) or up and down (to fine adjust the speed faster or slower)
 
 Upon receiving a MIDI clock start signal, the Pianocade's internal arpeggiator will be turned off, and the Pianocade will instead listen for a MIDI clock signal. Receiving a MIDI clock stop signal will re-engage the internal arpeggiator clock.
+
+## Sound bank settings
+### Default settings
+"x" is button pressed, with the Player 1 button being the leftmost position
+
+* x000 - 50% square wave
+* 0x00 - 25% square wave
+* 00x0 - 12.5% square wave
+* 000x - Simple volume envelope on 50% square wave
+* xx00 - "Violin"; slow attack, slow decay
+* x0x0 - "Piano"; fast attack, slow fade during sustain, fast decay
+* x00x - Tremolo (slow)
+* 0xx0 - Tremolo (fast)
+* 0x0x - Echo on release
+* 00xx - Super Mario Bros. Coin (Actual effect is B5)
+* xxx0 - Super Mario Bros. Coin on release (Actual effect is B5)
+* xx0x - SMB jump (Actual effect is A4 for small Mario and D4 for Super Mario)
+* x0xx - Zelda get item (Actual effect is F5)
+* 0xxx - Zelda magic rod (Actual effect is C#4)
+* xxxx - SMB stomp (Actual effect is A4)
